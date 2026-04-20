@@ -5,14 +5,14 @@ import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useInstagramProfile } from "@/components/veya/instagram-profile-context";
 import { SectionCard } from "@/components/veya/section-card";
 import type { ContentItemBundle } from "@/data/content-types";
-import { getDefaultProfileId } from "@/data/instagram-profiles";
+import { getDefaultProfileId, getInstagramProfileById } from "@/data/instagram-profiles";
 import { getCreatedItems } from "@/lib/client-created-items";
 
 type ReportingViewProps = {
   items?: ContentItemBundle[];
 };
 
-type ReportingMode = "weekly" | "monthly";
+type ReportingMode = "weekly" | "monthly" | "custom";
 
 type ProfileTargets = {
   reelsPerWeek: number;
@@ -36,6 +36,8 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
   const [profileId, setProfileId] = useState<string>(selectedProfileId || getDefaultProfileId());
   const [mode, setMode] = useState<ReportingMode>("monthly");
   const [anchorDate, setAnchorDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [customStartDate, setCustomStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [customEndDate, setCustomEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [targetsByProfile, setTargetsByProfile] = useState<Record<string, ProfileTargets>>({});
 
   useEffect(() => {
@@ -61,8 +63,8 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
   const currentTargets = targetsByProfile[profileId] ?? DEFAULT_TARGETS;
 
   const period = useMemo(
-    () => resolvePeriod(anchorDate, mode, currentTargets.workMonthStartDay),
-    [anchorDate, mode, currentTargets.workMonthStartDay]
+    () => resolvePeriod(anchorDate, mode, currentTargets.workMonthStartDay, customStartDate, customEndDate),
+    [anchorDate, mode, currentTargets.workMonthStartDay, customStartDate, customEndDate]
   );
 
   const scopedItems = useMemo(
@@ -81,6 +83,15 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
   const filmingDaysCount = countFilmingDays(scopedItems, period.start, period.end);
 
   const weeksInPeriod = Math.max(1, Math.ceil((period.end.getTime() - period.start.getTime()) / (7 * 24 * 60 * 60 * 1000)));
+  const sortedScopedItems = useMemo(
+    () =>
+      [...scopedItems].sort((a, b) => {
+        const delta = toTime(a.item.scheduledAt) - toTime(b.item.scheduledAt);
+        if (delta !== 0) return delta;
+        return a.item.title.localeCompare(b.item.title, "en");
+      }),
+    [scopedItems]
+  );
 
   const reelsTarget = mode === "weekly" ? currentTargets.reelsPerWeek : currentTargets.reelsPerWeek * weeksInPeriod;
   const carouselsTarget =
@@ -126,13 +137,31 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
           >
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
+            <option value="custom">Custom range</option>
           </select>
-          <input
-            type="date"
-            value={anchorDate}
-            onChange={(event) => setAnchorDate(event.target.value)}
-            className="h-9 rounded-lg border border-zinc-200/80 bg-white px-2.5 text-[12px] text-zinc-800 outline-none ring-zinc-300/50 focus:ring-2"
-          />
+          {mode === "custom" ? (
+            <>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(event) => setCustomStartDate(event.target.value)}
+                className="h-9 rounded-lg border border-zinc-200/80 bg-white px-2.5 text-[12px] text-zinc-800 outline-none ring-zinc-300/50 focus:ring-2"
+              />
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(event) => setCustomEndDate(event.target.value)}
+                className="h-9 rounded-lg border border-zinc-200/80 bg-white px-2.5 text-[12px] text-zinc-800 outline-none ring-zinc-300/50 focus:ring-2"
+              />
+            </>
+          ) : (
+            <input
+              type="date"
+              value={anchorDate}
+              onChange={(event) => setAnchorDate(event.target.value)}
+              className="h-9 rounded-lg border border-zinc-200/80 bg-white px-2.5 text-[12px] text-zinc-800 outline-none ring-zinc-300/50 focus:ring-2"
+            />
+          )}
         </div>
       </header>
 
@@ -171,6 +200,69 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
         <ProgressCard label="Posts created" completed={postsCount} target={0} showTarget={false} />
         <ProgressCard label="Filming days" completed={filmingDaysCount} target={filmingTarget} />
       </div>
+
+      <SectionCard className="px-6 py-6">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <h2 className="text-[11px] font-medium uppercase tracking-[0.1em] text-zinc-400">Detailed report</h2>
+          <p className="text-[12px] text-zinc-500">
+            {sortedScopedItems.length} post{sortedScopedItems.length === 1 ? "" : "s"} in selected period
+          </p>
+        </div>
+
+        {sortedScopedItems.length === 0 ? (
+          <div className="mt-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/60 px-4 py-5 text-[13px] text-zinc-600">
+            No posts found in this period.
+          </div>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="min-w-[1300px] border-collapse text-left text-[12px]">
+              <thead>
+                <tr className="border-b border-zinc-200 text-[10px] uppercase tracking-[0.08em] text-zinc-400">
+                  <th className="px-2 py-2 font-medium">Title</th>
+                  <th className="px-2 py-2 font-medium">Status</th>
+                  <th className="px-2 py-2 font-medium">Type</th>
+                  <th className="px-2 py-2 font-medium">Profile</th>
+                  <th className="px-2 py-2 font-medium">Platform</th>
+                  <th className="px-2 py-2 font-medium">Planned</th>
+                  <th className="px-2 py-2 font-medium">Filming</th>
+                  <th className="px-2 py-2 font-medium">Ready</th>
+                  <th className="px-2 py-2 font-medium">In preview</th>
+                  <th className="px-2 py-2 font-medium">Caption</th>
+                  <th className="px-2 py-2 font-medium">Script</th>
+                  <th className="px-2 py-2 font-medium">Comments</th>
+                  <th className="px-2 py-2 font-medium">Notes</th>
+                  <th className="px-2 py-2 font-medium">Drive</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedScopedItems.map((bundle) => {
+                  const profile = getInstagramProfileById(bundle.item.instagramProfileId ?? bundle.item.profileId ?? "");
+                  return (
+                    <tr key={bundle.id} className="border-b border-zinc-100 align-top text-zinc-700">
+                      <td className="max-w-[230px] px-2 py-2 font-medium text-zinc-900">{bundle.item.title}</td>
+                      <td className="px-2 py-2">{bundle.item.status}</td>
+                      <td className="px-2 py-2">{bundle.item.contentType}</td>
+                      <td className="px-2 py-2">{profile?.name ?? (bundle.item.instagramProfileId ?? bundle.item.profileId)}</td>
+                      <td className="px-2 py-2">{bundle.item.platform.join(", ")}</td>
+                      <td className="px-2 py-2">{bundle.item.scheduledDate ?? "—"}</td>
+                      <td className="px-2 py-2">{bundle.item.filmingDate ?? "—"}</td>
+                      <td className="px-2 py-2">{bundle.item.ready ? "Yes" : "No"}</td>
+                      <td className="px-2 py-2">{bundle.item.includeInPreview ? "Yes" : "No"}</td>
+                      <td className="max-w-[260px] px-2 py-2">{bundle.item.caption || "—"}</td>
+                      <td className="max-w-[260px] px-2 py-2">{bundle.item.script || "—"}</td>
+                      <td className="max-w-[260px] px-2 py-2">{bundle.item.description || "—"}</td>
+                      <td className="max-w-[260px] px-2 py-2">{bundle.item.notes || "—"}</td>
+                      <td className="max-w-[220px] px-2 py-2">
+                        {bundle.item.driveLink || bundle.item.assetFolderUrl || bundle.item.googleDriveUrl || "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
     </div>
   );
 }
@@ -241,7 +333,30 @@ function countFilmingDays(items: ContentItemBundle[], start: Date, end: Date): n
   return uniqueDays.size;
 }
 
-function resolvePeriod(anchorDate: string, mode: ReportingMode, workMonthStartDay: number): { start: Date; end: Date } {
+function resolvePeriod(
+  anchorDate: string,
+  mode: ReportingMode,
+  workMonthStartDay: number,
+  customStartDate: string,
+  customEndDate: string
+): { start: Date; end: Date } {
+  if (mode === "custom") {
+    const start = new Date(`${customStartDate}T00:00:00.000Z`);
+    const endBase = new Date(`${customEndDate}T00:00:00.000Z`);
+    if (!Number.isFinite(+start) || !Number.isFinite(+endBase)) {
+      const fallback = new Date(`${anchorDate}T12:00:00.000Z`);
+      const end = new Date(fallback);
+      end.setUTCDate(end.getUTCDate() + 1);
+      fallback.setUTCHours(0, 0, 0, 0);
+      return { start: fallback, end };
+    }
+    const orderedStart = start.getTime() <= endBase.getTime() ? start : endBase;
+    const orderedEndBase = start.getTime() <= endBase.getTime() ? endBase : start;
+    const end = new Date(orderedEndBase);
+    end.setUTCDate(end.getUTCDate() + 1);
+    return { start: orderedStart, end };
+  }
+
   const base = new Date(`${anchorDate}T12:00:00.000Z`);
   if (mode === "weekly") {
     const day = base.getUTCDay() || 7;
@@ -260,6 +375,12 @@ function resolvePeriod(anchorDate: string, mode: ReportingMode, workMonthStartDa
   const start = new Date(Date.UTC(year, useCurrentMonthStart ? month : month - 1, startDay, 0, 0, 0));
   const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, startDay, 0, 0, 0));
   return { start, end };
+}
+
+function toTime(value?: string): number {
+  if (!value) return Number.MAX_SAFE_INTEGER;
+  const time = +new Date(value);
+  return Number.isFinite(time) ? time : Number.MAX_SAFE_INTEGER;
 }
 
 function isWithinPeriod(dateLike: string | undefined, start: Date, end: Date): boolean {
