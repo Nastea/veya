@@ -444,7 +444,7 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
             </button>
           </SectionCard>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {sorted.map((bundle) => (
               <IdeaCard
                 key={bundle.id}
@@ -685,7 +685,7 @@ function IdeaCard({
   onDelete: (id: string) => void;
 }) {
   return (
-    <div className="group overflow-hidden rounded-2xl border border-zinc-200/70 bg-white transition-colors hover:border-zinc-300">
+    <div className="group overflow-hidden rounded-xl border border-zinc-200/70 bg-white transition-colors hover:border-zinc-300">
       <Link href={`/content/${bundle.id}`} className="block">
         <ContentPreviewCard
           title={bundle.item.title}
@@ -694,21 +694,21 @@ function IdeaCard({
           aspectClassName="aspect-[4/5]"
           variant="ideas"
         />
-        <div className="space-y-2 px-4 py-4">
-          <p className="line-clamp-2 text-[13px] font-medium leading-snug text-zinc-900">{bundle.item.title}</p>
-          <p className="text-[11px] text-zinc-500">
+        <div className="space-y-1.5 px-3 py-3">
+          <p className="line-clamp-2 text-[12px] font-medium leading-snug text-zinc-900">{bundle.item.title}</p>
+          <p className="text-[10px] text-zinc-500">
             {bundle.item.contentType} · {bundle.item.platform.join(" · ")}
           </p>
           <div className="flex items-center justify-between gap-2">
-            <span className="rounded-full border border-zinc-200/90 bg-zinc-50 px-2 py-0.5 text-[11px] text-zinc-600">
+            <span className="rounded-full border border-zinc-200/90 bg-zinc-50 px-1.5 py-0.5 text-[10px] text-zinc-600">
               {bundle.item.status}
             </span>
-            <span className="text-[11px] text-zinc-400">{bundle.item.scheduledDate ?? "Unscheduled"}</span>
+            <span className="text-[10px] text-zinc-400">{bundle.item.scheduledDate ?? "Unscheduled"}</span>
           </div>
         </div>
       </Link>
-      <div className="flex items-center justify-between border-t border-zinc-100 px-4 py-2.5">
-        <label className="inline-flex items-center gap-2 text-[11px] text-zinc-600">
+      <div className="flex items-center justify-between border-t border-zinc-100 px-3 py-2">
+        <label className="inline-flex items-center gap-1.5 text-[10px] text-zinc-600">
           <input
             type="checkbox"
             checked={selected}
@@ -720,7 +720,7 @@ function IdeaCard({
         <button
           type="button"
           onClick={() => void onDelete(bundle.id)}
-          className="text-[11px] font-medium text-rose-600 transition-colors hover:text-rose-700"
+          className="text-[10px] font-medium text-rose-600 transition-colors hover:text-rose-700"
         >
           Delete idea
         </button>
