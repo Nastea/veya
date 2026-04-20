@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/veya/app-sidebar";
 import { InstagramProfileProvider } from "@/components/veya/instagram-profile-context";
 import { TopStatusBar } from "@/components/veya/top-status-bar";
-import { getDefaultProfileId } from "@/data/instagram-profiles";
+import { getDefaultProfileId, listInstagramProfiles } from "@/data/instagram-profiles";
 
 type VeyaAppShellProps = {
   children: React.ReactNode;
@@ -21,7 +21,15 @@ export function VeyaAppShell({ children, contextLabel = "Veya", statusText = "Sa
   useEffect(() => {
     const key = "veya-selected-profile";
     const stored = window.sessionStorage.getItem(key);
-    if (stored) setSelectedProfileId(stored);
+    if (!stored) return;
+    const activeProfileIds = new Set(listInstagramProfiles().filter((profile) => profile.active).map((profile) => profile.id));
+    if (activeProfileIds.has(stored)) {
+      setSelectedProfileId(stored);
+      return;
+    }
+    const fallback = getDefaultProfileId();
+    setSelectedProfileId(fallback);
+    window.sessionStorage.setItem(key, fallback);
   }, []);
 
   function handleProfileChange(profileId: string) {

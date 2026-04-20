@@ -30,6 +30,7 @@ type ContentItemDetailsViewProps = {
   assets: ContentAsset[];
   tasks: ContentTask[];
   editable?: boolean;
+  onDelete?: () => void;
   onItemChange?: (next: ContentItemFields) => void;
   onTasksChange?: (next: ContentTask[]) => void;
 };
@@ -38,12 +39,14 @@ function ContentDetailsPanel({
   item,
   tasks,
   editable = false,
+  onDelete,
   onItemChange,
   onTasksChange
 }: {
   item: ContentItemFields;
   tasks: ContentTask[];
   editable?: boolean;
+  onDelete?: () => void;
   onItemChange?: (next: ContentItemFields) => void;
   onTasksChange?: (next: ContentTask[]) => void;
 }) {
@@ -366,6 +369,17 @@ function ContentDetailsPanel({
         <div className="border-t border-zinc-100" />
         <ToggleRow label="Include in feed preview" enabled={item.includeInPreview} />
       </SectionCard>
+      {editable && onDelete ? (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onDelete}
+            className="h-9 rounded-lg border border-rose-200 bg-white px-3.5 text-[12px] font-medium text-rose-700 transition-colors hover:border-rose-300 hover:bg-rose-50"
+          >
+            Delete item
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -376,6 +390,7 @@ export function ContentItemDetailsView({
   assets,
   tasks,
   editable = false,
+  onDelete,
   onItemChange,
   onTasksChange
 }: ContentItemDetailsViewProps) {
@@ -386,6 +401,7 @@ export function ContentItemDetailsView({
         item={item}
         tasks={tasks}
         editable={editable}
+        onDelete={onDelete}
         onItemChange={onItemChange}
         onTasksChange={onTasksChange}
       />

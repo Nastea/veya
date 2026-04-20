@@ -11,6 +11,7 @@ import { getDefaultProfileId, listInstagramProfiles } from "@/data/instagram-pro
 import { applyChecklistAutoCompletion } from "@/lib/checklist-auto-completion";
 import { getCreatedItems, saveCreatedItem } from "@/lib/client-created-items";
 import { createChecklistForType } from "@/lib/checklist-templates";
+import { insertSupabaseContentItem, listSupabaseContentItems } from "@/lib/supabase-content-items";
 import { importVeyaCsv } from "@/lib/veya-csv-import";
 
 const STATUS_FILTERS: Array<"All" | ContentStatus> = ["All", "Idea", "Planned", "Filmed", "Done"];
@@ -41,7 +42,24 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
   const [caption, setCaption] = useState("");
 
   useEffect(() => {
-    setAllItems(getCreatedItems());
+    let cancelled = false;
+    const sessionItems = getCreatedItems();
+
+    async function load() {
+      try {
+        const remoteItems = await listSupabaseContentItems();
+        if (cancelled) return;
+        setAllItems(remoteItems.length > 0 ? mergeById(sessionItems, remoteItems) : sessionItems);
+      } catch {
+        if (cancelled) return;
+        setAllItems(sessionItems);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -72,7 +90,7 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
     setCaption("");
   }
 
-  function handleCreateIdea(event: FormEvent<HTMLFormElement>) {
+  async function handleCreateIdea(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const cleanTitle = title.trim();
     if (!cleanTitle) return;
@@ -136,10 +154,39 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
       tasks: applyChecklistAutoCompletion(draftBundle.tasks, draftBundle.item, draftBundle.assets)
     };
 
-    setAllItems((prev) => [newBundle, ...prev]);
-    saveCreatedItem(newBundle);
+    const plannedDateForDb = hasDate ? plannedDate : null;
+
+    try {
+      const inserted = await insertSupabaseContentItem({
+        externalId: id,
+        importSource: "manual",
+        title: cleanTitle,
+        contentType,
+        instagramProfileId: profileId,
+        status,
+        plannedDate: plannedDateForDb,
+        caption: caption.trim(),
+        script: "",
+        description: "",
+        notes: "",
+        filmingDate: null,
+        assetSource: "manual",
+        assetFolderUrl: "",
+        driveLink: "https://drive.google.com/drive/folders/1mockIdeaBank",
+        coverImageUrl: ""
+      });
+      setAllItems((prev) => [inserted, ...prev]);
+      saveCreatedItem(inserted);
+      setImportFeedback("Idea saved to Supabase");
+    } catch {
+      setAllItems((prev) => [newBundle, ...prev]);
+      saveCreatedItem(newBundle);
+      setImportFeedback("Supabase unavailable. Saved locally for now.");
+    }
+
     setIsCreateOpen(false);
     resetForm();
+    window.setTimeout(() => setImportFeedback(null), 2600);
   }
 
   async function handleCsvImport(file: File | null) {

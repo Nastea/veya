@@ -1,9 +1,8 @@
 import type { InstagramProfile } from "./content-types";
 
 export const instagramProfiles: InstagramProfile[] = [
-  { id: "luna-studio", name: "Luna Studio", handle: "@lunastudio", avatar: "L", active: true },
-  { id: "northbound-skin", name: "Northbound Skin", handle: "@northboundskin", avatar: "N", active: true },
-  { id: "atelier-house", name: "Atelier House", handle: "@atelierhouse", avatar: "A", active: true }
+  { id: "anastasia", name: "Anastasia", handle: "@anastasia", avatar: "A", active: true },
+  { id: "ecaterina", name: "Ecaterina", handle: "@ecaterina", avatar: "E", active: true }
 ];
 
 export function listInstagramProfiles(): InstagramProfile[] {
@@ -15,5 +14,5 @@ export function getInstagramProfileById(id: string): InstagramProfile | undefine
 }
 
 export function getDefaultProfileId(): string {
-  return instagramProfiles.find((profile) => profile.active)?.id ?? instagramProfiles[0]?.id ?? "luna-studio";
+  return instagramProfiles.find((profile) => profile.active)?.id ?? instagramProfiles[0]?.id ?? "anastasia";
 }
