@@ -40,7 +40,14 @@ export function ContentPreviewCard({
         <img src={item.coverImageUrl} alt={title} className="absolute inset-0 h-full w-full object-cover" />
       ) : feedShowsPlaceholder || !effectivePreview ? (
         <div className="absolute inset-0 flex items-center justify-center bg-[#f1f1f3] px-7 text-center">
-          <p className="text-balance text-lg font-medium leading-snug tracking-tight text-zinc-500 sm:text-xl">{title}</p>
+          {variant === "feed" ? (
+            <div className="space-y-2">
+              <p className="text-balance text-lg font-medium leading-snug tracking-tight text-zinc-500 sm:text-xl">{title}</p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-400">{item.contentType}</p>
+            </div>
+          ) : (
+            <p className="text-balance text-lg font-medium leading-snug tracking-tight text-zinc-500 sm:text-xl">{title}</p>
+          )}
         </div>
       ) : null}
 
