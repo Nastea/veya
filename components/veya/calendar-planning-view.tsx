@@ -1,9 +1,11 @@
 "use client";
 
+import { DndContext, PointerSensor, type DragEndEvent, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { CalendarContentCard } from "@/components/veya/calendar-content-card";
 import { useInstagramProfile } from "@/components/veya/instagram-profile-context";
@@ -13,6 +15,7 @@ import { getDefaultProfileId, listInstagramProfiles } from "@/data/instagram-pro
 import { applyChecklistAutoCompletion } from "@/lib/checklist-auto-completion";
 import { saveCreatedItem, getCreatedItems } from "@/lib/client-created-items";
 import { createChecklistForType } from "@/lib/checklist-templates";
+import { updateSupabaseContentItem } from "@/lib/supabase-content-items";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
@@ -85,6 +88,7 @@ export function CalendarPlanningView({
   const [caption, setCaption] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [createFeedback, setCreateFeedback] = useState<string | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   useEffect(() => {
     setAllItems(getCreatedItems());
@@ -223,6 +227,40 @@ export function CalendarPlanningView({
     }, 220);
   }
 
+  function handleDragEnd(event: DragEndEvent) {
+    const overId = event.over?.id;
+    const activeId = String(event.active.id);
+    if (!overId || !String(overId).startsWith("day-")) return;
+    const day = Number(String(overId).slice(4));
+    if (!Number.isFinite(day) || day <= 0) return;
+
+    const nextDate = new Date(Date.UTC(year, monthIndex, day, 10, 0, 0, 0));
+    const scheduledAt = nextDate.toISOString();
+    const scheduledDate = nextDate.toLocaleString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    });
+
+    setAllItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== activeId) return item;
+        const updated: ContentItemBundle = {
+          ...item,
+          item: { ...item.item, scheduledAt, scheduledDate, status: item.item.status === "Idea" ? "Planned" : item.item.status }
+        };
+        saveCreatedItem(updated);
+        if (updated.id.startsWith("supa-")) {
+          void updateSupabaseContentItem(updated);
+        }
+        return updated;
+      })
+    );
+  }
+
   return (
     <>
       <div className="space-y-8 px-5 py-8 sm:px-7 sm:py-10 lg:px-9 lg:py-12">
@@ -299,6 +337,7 @@ export function CalendarPlanningView({
         </div>
       </header>
 
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <SectionCard className="overflow-hidden p-0">
         <div className="grid grid-cols-7 border-b border-zinc-100 bg-zinc-50/80">
           {WEEKDAYS.map((d) => (
@@ -314,8 +353,10 @@ export function CalendarPlanningView({
           {cells.map((day, i) => {
             const dayEvents = day ? byDay.get(day) ?? [] : [];
             return (
-              <div
+              <DayCell
                 key={i}
+                index={i}
+                day={day}
                 className="min-h-[168px] border-b border-l border-zinc-100 bg-white p-2 first:border-l-0 [&:nth-child(7n+1)]:border-l-0 lg:min-h-[200px]"
               >
                 {day !== null ? (
@@ -324,17 +365,18 @@ export function CalendarPlanningView({
                     <ul className="mt-2 max-h-[200px] space-y-2 overflow-y-auto pr-0.5 lg:max-h-[240px]">
                       {dayEvents.map((b) => (
                         <li key={b.id}>
-                          <CalendarContentCard bundle={b} />
+                          <DraggableCalendarCard bundle={b} />
                         </li>
                       ))}
                     </ul>
                   </>
                 ) : null}
-              </div>
+              </DayCell>
             );
           })}
         </div>
       </SectionCard>
+      </DndContext>
 
       <SectionCard className="px-6 py-6">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -510,6 +552,43 @@ export function CalendarPlanningView({
         </div>
       ) : null}
     </>
+  );
+}
+
+function DayCell({
+  index,
+  day,
+  className,
+  children
+}: {
+  index: number;
+  day: number | null;
+  className: string;
+  children: ReactNode;
+}) {
+  const droppableId = day !== null ? `day-${day}` : `empty-${index}`;
+  const { isOver, setNodeRef } = useDroppable({ id: droppableId, disabled: day === null });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${className} ${isOver ? "bg-zinc-50/80" : ""}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function DraggableCalendarCard({ bundle }: { bundle: ContentItemBundle }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: bundle.id });
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.5 : 1
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+      <CalendarContentCard bundle={bundle} />
+    </div>
   );
 }
 
