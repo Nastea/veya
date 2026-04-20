@@ -586,8 +586,8 @@ function DraggableCalendarCard({ bundle }: { bundle: ContentItemBundle }) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
-      <CalendarContentCard bundle={bundle} />
+    <div ref={setNodeRef} style={style}>
+      <CalendarContentCard bundle={bundle} dragHandleProps={{ ...listeners, ...attributes }} />
     </div>
   );
 }

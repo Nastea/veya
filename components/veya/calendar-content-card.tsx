@@ -1,15 +1,18 @@
 "use client";
 
+import { GripVertical } from "lucide-react";
 import Link from "next/link";
+import type { HTMLAttributes } from "react";
 
 import { ContentPreviewCard } from "@/components/veya/content-preview-card";
 import type { ContentItemBundle } from "@/data/content-types";
 
 type CalendarContentCardProps = {
   bundle: ContentItemBundle;
+  dragHandleProps?: HTMLAttributes<HTMLButtonElement>;
 };
 
-export function CalendarContentCard({ bundle }: CalendarContentCardProps) {
+export function CalendarContentCard({ bundle, dragHandleProps }: CalendarContentCardProps) {
   const platformLabel =
     bundle.item.platform.length > 2
       ? `${bundle.item.platform[0]} +${bundle.item.platform.length - 1}`
@@ -41,6 +44,17 @@ export function CalendarContentCard({ bundle }: CalendarContentCardProps) {
           >
             {bundle.item.contentType}
           </span>
+          {dragHandleProps ? (
+            <button
+              type="button"
+              aria-label="Drag post to another day"
+              className="inline-flex h-5 w-5 cursor-grab items-center justify-center rounded border border-zinc-200 bg-white text-zinc-400 transition-colors hover:border-zinc-300 hover:text-zinc-600 active:cursor-grabbing"
+              onClick={(event) => event.preventDefault()}
+              {...dragHandleProps}
+            >
+              <GripVertical className="h-3 w-3" />
+            </button>
+          ) : null}
         </div>
         <p className="line-clamp-2 text-[11px] font-medium leading-snug text-zinc-900 group-hover:text-zinc-950">
           {bundle.item.title}
