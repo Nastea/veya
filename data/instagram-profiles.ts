@@ -14,5 +14,10 @@ export function getInstagramProfileById(id: string): InstagramProfile | undefine
 }
 
 export function getDefaultProfileId(): string {
-  return instagramProfiles.find((profile) => profile.active)?.id ?? instagramProfiles[0]?.id ?? "anastasia";
+  return (
+    instagramProfiles.find((profile) => profile.id === "ecaterina" && profile.active)?.id ??
+    instagramProfiles.find((profile) => profile.active)?.id ??
+    instagramProfiles[0]?.id ??
+    "ecaterina"
+  );
 }
