@@ -17,7 +17,7 @@ import { saveCreatedItem, getCreatedItems } from "@/lib/client-created-items";
 import { createChecklistForType } from "@/lib/checklist-templates";
 import { updateSupabaseContentItem } from "@/lib/supabase-content-items";
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 const PLATFORM_FILTERS = ["All", "Instagram", "Pinterest"] as const;
 const TYPE_FILTERS: Array<"All" | ContentFormat> = ["All", "Post", "Carousel", "Reel"];
@@ -25,7 +25,7 @@ const PROFILES = listInstagramProfiles().filter((profile) => profile.active);
 
 function buildMonthCells(year: number, monthIndex: number): (number | null)[] {
   const first = new Date(year, monthIndex, 1);
-  const startPad = first.getDay();
+  const startPad = (first.getDay() + 6) % 7;
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const cells: (number | null)[] = [];
   for (let i = 0; i < startPad; i += 1) cells.push(null);

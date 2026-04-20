@@ -28,13 +28,25 @@ export function CalendarContentCard({ bundle }: CalendarContentCardProps) {
         variant="calendar"
       />
       <div className="space-y-2 p-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <span
+            className={[
+              "inline-flex rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em]",
+              bundle.item.contentType === "Reel"
+                ? "border-indigo-200/90 bg-indigo-50 text-indigo-700"
+                : bundle.item.contentType === "Carousel"
+                  ? "border-amber-200/90 bg-amber-50 text-amber-700"
+                  : "border-zinc-200/90 bg-zinc-50 text-zinc-700"
+            ].join(" ")}
+          >
+            {bundle.item.contentType}
+          </span>
+        </div>
         <p className="line-clamp-2 text-[11px] font-medium leading-snug text-zinc-900 group-hover:text-zinc-950">
           {bundle.item.title}
         </p>
         <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
           <span className="truncate text-zinc-500">{platformLabel}</span>
-          <span className="text-zinc-300">•</span>
-          <span className="font-medium uppercase tracking-[0.08em] text-zinc-400">{bundle.item.contentType}</span>
           <span className="text-zinc-300">•</span>
           <span className="inline-flex rounded-full border border-zinc-200/90 bg-zinc-50 px-1.5 py-0.5 text-zinc-600">
             {bundle.item.status}
