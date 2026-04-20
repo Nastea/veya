@@ -15,7 +15,7 @@ import { getDefaultProfileId, listInstagramProfiles } from "@/data/instagram-pro
 import { applyChecklistAutoCompletion } from "@/lib/checklist-auto-completion";
 import { saveCreatedItem, getCreatedItems } from "@/lib/client-created-items";
 import { createChecklistForType } from "@/lib/checklist-templates";
-import { updateSupabaseContentItem } from "@/lib/supabase-content-items";
+import { insertSupabaseBundle, listSupabaseContentItems, updateSupabaseContentItem } from "@/lib/supabase-content-items";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -91,7 +91,22 @@ export function CalendarPlanningView({
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   useEffect(() => {
-    setAllItems(getCreatedItems());
+    let cancelled = false;
+    const sessionItems = getCreatedItems();
+    async function load() {
+      try {
+        const remoteItems = await listSupabaseContentItems();
+        if (cancelled) return;
+        setAllItems(remoteItems.length > 0 ? mergeById(sessionItems, remoteItems) : sessionItems);
+      } catch {
+        if (cancelled) return;
+        setAllItems(sessionItems);
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -150,7 +165,7 @@ export function CalendarPlanningView({
     setCaption("");
   }
 
-  function handleCreateItem(event: FormEvent<HTMLFormElement>) {
+  async function handleCreateItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isCreating) return;
     const cleanTitle = title.trim();
@@ -213,18 +228,34 @@ export function CalendarPlanningView({
       tasks: applyChecklistAutoCompletion(draftBundle.tasks, draftBundle.item, draftBundle.assets)
     };
 
-    setAllItems((prev) => [newBundle, ...prev]);
-    saveCreatedItem(newBundle);
-    setYear(new Date(scheduledAt).getUTCFullYear());
-    setMonthIndex(new Date(scheduledAt).getUTCMonth());
-    setCreateFeedback("Created. Opening details...");
-    setIsCreateOpen(false);
-    resetCreateForm();
-    window.setTimeout(() => {
-      setCreateFeedback(null);
-      setIsCreating(false);
-      router.push(`/content/${newBundle.id}`);
-    }, 220);
+    try {
+      const inserted = await insertSupabaseBundle(newBundle);
+      setAllItems((prev) => [inserted, ...prev]);
+      saveCreatedItem(inserted);
+      setYear(new Date(scheduledAt).getUTCFullYear());
+      setMonthIndex(new Date(scheduledAt).getUTCMonth());
+      setCreateFeedback("Created and synced. Opening details...");
+      setIsCreateOpen(false);
+      resetCreateForm();
+      window.setTimeout(() => {
+        setCreateFeedback(null);
+        setIsCreating(false);
+        router.push(`/content/${inserted.id}`);
+      }, 220);
+    } catch {
+      setAllItems((prev) => [newBundle, ...prev]);
+      saveCreatedItem(newBundle);
+      setYear(new Date(scheduledAt).getUTCFullYear());
+      setMonthIndex(new Date(scheduledAt).getUTCMonth());
+      setCreateFeedback("Supabase unavailable. Saved locally.");
+      setIsCreateOpen(false);
+      resetCreateForm();
+      window.setTimeout(() => {
+        setCreateFeedback(null);
+        setIsCreating(false);
+        router.push(`/content/${newBundle.id}`);
+      }, 220);
+    }
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -619,4 +650,15 @@ function buildAssetsForType(id: string, type: ContentFormat) {
     { id: `${id}-asset-2`, type: "image" as const, label: "Slide 2", color: "from-stone-200/60 to-neutral-50" },
     { id: `${id}-asset-3`, type: "image" as const, label: "Slide 3", color: "from-neutral-100 to-zinc-50" }
   ];
+}
+
+function mergeById(base: ContentItemBundle[], additions: ContentItemBundle[]): ContentItemBundle[] {
+  const seen = new Set<string>();
+  const merged: ContentItemBundle[] = [];
+  for (const item of [...additions, ...base]) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    merged.push(item);
+  }
+  return merged;
 }

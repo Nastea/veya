@@ -7,6 +7,7 @@ import { SectionCard } from "@/components/veya/section-card";
 import type { ContentItemBundle } from "@/data/content-types";
 import { getDefaultProfileId, getInstagramProfileById } from "@/data/instagram-profiles";
 import { getCreatedItems } from "@/lib/client-created-items";
+import { listSupabaseContentItems } from "@/lib/supabase-content-items";
 
 type ReportingViewProps = {
   items?: ContentItemBundle[];
@@ -41,7 +42,19 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
   const [targetsByProfile, setTargetsByProfile] = useState<Record<string, ProfileTargets>>({});
 
   useEffect(() => {
-    setAllItems(getCreatedItems());
+    let cancelled = false;
+    const sessionItems = getCreatedItems();
+    async function loadItems() {
+      try {
+        const remoteItems = await listSupabaseContentItems();
+        if (cancelled) return;
+        setAllItems(remoteItems.length > 0 ? mergeById(sessionItems, remoteItems) : sessionItems);
+      } catch {
+        if (cancelled) return;
+        setAllItems(sessionItems);
+      }
+    }
+    void loadItems();
     try {
       const raw = window.sessionStorage.getItem(TARGETS_KEY);
       if (!raw) return;
@@ -50,6 +63,9 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
     } catch {
       // ignore malformed session state
     }
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -394,5 +410,16 @@ function formatRange(start: Date, end: Date): string {
   const endInclusive = new Date(end);
   endInclusive.setUTCDate(endInclusive.getUTCDate() - 1);
   return `${formatter.format(start)} - ${formatter.format(endInclusive)}`;
+}
+
+function mergeById(base: ContentItemBundle[], additions: ContentItemBundle[]): ContentItemBundle[] {
+  const seen = new Set<string>();
+  const merged: ContentItemBundle[] = [];
+  for (const item of [...additions, ...base]) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    merged.push(item);
+  }
+  return merged;
 }
 

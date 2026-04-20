@@ -11,7 +11,12 @@ import { getDefaultProfileId, listInstagramProfiles } from "@/data/instagram-pro
 import { applyChecklistAutoCompletion } from "@/lib/checklist-auto-completion";
 import { deleteCreatedItem, getCreatedItems, saveCreatedItem } from "@/lib/client-created-items";
 import { createChecklistForType } from "@/lib/checklist-templates";
-import { deleteSupabaseContentItem, insertSupabaseContentItem, listSupabaseContentItems } from "@/lib/supabase-content-items";
+import {
+  deleteSupabaseContentItem,
+  insertSupabaseBundle,
+  insertSupabaseContentItem,
+  listSupabaseContentItems
+} from "@/lib/supabase-content-items";
 import { importVeyaCsv } from "@/lib/veya-csv-import";
 
 const STATUS_FILTERS: Array<"All" | ContentStatus> = ["All", "Idea", "Planned", "Filmed", "Done"];
@@ -208,9 +213,19 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
       if (imported.length === 0) {
         setImportFeedback("No rows imported");
       } else {
-        setAllItems((prev) => mergeById(prev, imported));
-        imported.forEach((bundle) => saveCreatedItem(bundle));
-        setImportFeedback(`Imported ${imported.length} item${imported.length === 1 ? "" : "s"}`);
+        const results = await Promise.allSettled(imported.map((bundle) => insertSupabaseBundle(bundle)));
+        const synced = results
+          .filter((entry): entry is PromiseFulfilledResult<ContentItemBundle> => entry.status === "fulfilled")
+          .map((entry) => entry.value);
+        const failed = results.length - synced.length;
+        const toStore = synced.length > 0 ? mergeById(imported, synced) : imported;
+        setAllItems((prev) => mergeById(prev, toStore));
+        toStore.forEach((bundle) => saveCreatedItem(bundle));
+        setImportFeedback(
+          failed > 0
+            ? `Imported ${toStore.length} items (${failed} saved only locally)`
+            : `Imported ${toStore.length} item${toStore.length === 1 ? "" : "s"}`
+        );
       }
     } catch (error) {
       setImportFeedback(error instanceof Error ? error.message : "CSV import failed");
@@ -222,7 +237,8 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
 
   function handleCsvPasteImport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    try {
+    void (async () => {
+      try {
       const imported = importVeyaCsv(csvText, {
         defaultProfileId: csvImportProfileId,
         defaultPlatform: csvImportPlatform
@@ -230,17 +246,28 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
       if (imported.length === 0) {
         setImportFeedback("No rows imported");
       } else {
-        setAllItems((prev) => mergeById(prev, imported));
-        imported.forEach((bundle) => saveCreatedItem(bundle));
-        setImportFeedback(`Imported ${imported.length} item${imported.length === 1 ? "" : "s"}`);
+        const results = await Promise.allSettled(imported.map((bundle) => insertSupabaseBundle(bundle)));
+        const synced = results
+          .filter((entry): entry is PromiseFulfilledResult<ContentItemBundle> => entry.status === "fulfilled")
+          .map((entry) => entry.value);
+        const failed = results.length - synced.length;
+        const toStore = synced.length > 0 ? mergeById(imported, synced) : imported;
+        setAllItems((prev) => mergeById(prev, toStore));
+        toStore.forEach((bundle) => saveCreatedItem(bundle));
+        setImportFeedback(
+          failed > 0
+            ? `Imported ${toStore.length} items (${failed} saved only locally)`
+            : `Imported ${toStore.length} item${toStore.length === 1 ? "" : "s"}`
+        );
       }
       setIsPasteOpen(false);
       setCsvText("");
-    } catch (error) {
-      setImportFeedback(error instanceof Error ? error.message : "CSV import failed");
-    } finally {
-      window.setTimeout(() => setImportFeedback(null), 2600);
-    }
+      } catch (error) {
+        setImportFeedback(error instanceof Error ? error.message : "CSV import failed");
+      } finally {
+        window.setTimeout(() => setImportFeedback(null), 2600);
+      }
+    })();
   }
 
   async function handleDeleteIdea(id: string) {

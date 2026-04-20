@@ -8,6 +8,7 @@ import { ContentPreviewCard } from "@/components/veya/content-preview-card";
 import { SectionCard } from "@/components/veya/section-card";
 import type { ContentItemBundle } from "@/data/content-types";
 import { getCreatedItems } from "@/lib/client-created-items";
+import { listSupabaseContentItems } from "@/lib/supabase-content-items";
 
 const PLATFORM_FILTERS = ["All", "Instagram", "Pinterest"] as const;
 
@@ -47,7 +48,22 @@ export function FeedPreviewGrid({ items = [] }: FeedPreviewGridProps) {
   const [sort, setSort] = useState<SortValue>("scheduled-asc");
 
   useEffect(() => {
-    setAllItems(getCreatedItems().filter((item) => item.item.includeInPreview));
+    let cancelled = false;
+    const sessionItems = getCreatedItems().filter((item) => item.item.includeInPreview);
+    async function load() {
+      try {
+        const remoteItems = (await listSupabaseContentItems()).filter((item) => item.item.includeInPreview);
+        if (cancelled) return;
+        setAllItems(remoteItems.length > 0 ? mergeById(sessionItems, remoteItems) : sessionItems);
+      } catch {
+        if (cancelled) return;
+        setAllItems(sessionItems);
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const filtered = useMemo(
@@ -157,4 +173,15 @@ function FeedSquareCard({ bundle }: { bundle: ContentItemBundle }) {
       />
     </Link>
   );
+}
+
+function mergeById(base: ContentItemBundle[], additions: ContentItemBundle[]): ContentItemBundle[] {
+  const seen = new Set<string>();
+  const merged: ContentItemBundle[] = [];
+  for (const item of [...additions, ...base]) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    merged.push(item);
+  }
+  return merged;
 }

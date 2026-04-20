@@ -104,6 +104,29 @@ export async function insertSupabaseContentItem(input: InsertSupabaseContentItem
   return mapRowToBundle(data as SupabaseContentItemRow);
 }
 
+export async function insertSupabaseBundle(bundle: ContentItemBundle): Promise<ContentItemBundle> {
+  const plannedDate = bundle.item.scheduledAt ? bundle.item.scheduledAt.slice(0, 10) : null;
+  const filmingDate = bundle.item.filmingDate ? bundle.item.filmingDate.slice(0, 10) : null;
+  return insertSupabaseContentItem({
+    externalId: bundle.item.externalId ?? bundle.id,
+    importSource: bundle.item.importSource ?? "manual",
+    title: bundle.item.title,
+    contentType: bundle.item.contentType,
+    instagramProfileId: bundle.item.instagramProfileId ?? bundle.item.profileId ?? getDefaultProfileId(),
+    status: bundle.item.status,
+    plannedDate,
+    caption: bundle.item.caption ?? "",
+    script: bundle.item.script ?? "",
+    description: bundle.item.description ?? "",
+    notes: bundle.item.notes ?? "",
+    filmingDate,
+    assetSource: bundle.item.assetSource ?? "manual",
+    assetFolderUrl: bundle.item.assetFolderUrl ?? "",
+    driveLink: bundle.item.driveLink ?? bundle.item.googleDriveUrl ?? "",
+    coverImageUrl: bundle.item.coverImageUrl ?? ""
+  });
+}
+
 export async function updateSupabaseContentItem(bundle: ContentItemBundle): Promise<void> {
   const supabase = requireSupabaseClient();
   const rawId = bundle.id.startsWith("supa-") ? bundle.id.slice(5) : bundle.id;

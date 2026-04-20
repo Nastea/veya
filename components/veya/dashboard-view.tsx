@@ -6,12 +6,28 @@ import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/veya/section-card";
 import type { ContentItemBundle } from "@/data/content-types";
 import { getCreatedItems } from "@/lib/client-created-items";
+import { listSupabaseContentItems } from "@/lib/supabase-content-items";
 
 export function DashboardView() {
   const [items, setItems] = useState<ContentItemBundle[]>([]);
 
   useEffect(() => {
-    setItems(getCreatedItems());
+    let cancelled = false;
+    const sessionItems = getCreatedItems();
+    async function load() {
+      try {
+        const remoteItems = await listSupabaseContentItems();
+        if (cancelled) return;
+        setItems(remoteItems.length > 0 ? mergeById(sessionItems, remoteItems) : sessionItems);
+      } catch {
+        if (cancelled) return;
+        setItems(sessionItems);
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const sorted = useMemo(() => [...items].sort((a, b) => toTime(a.item.scheduledAt) - toTime(b.item.scheduledAt)), [items]);
@@ -94,4 +110,15 @@ function toTime(value?: string): number {
   if (!value) return Number.MAX_SAFE_INTEGER;
   const time = +new Date(value);
   return Number.isFinite(time) ? time : Number.MAX_SAFE_INTEGER;
+}
+
+function mergeById(base: ContentItemBundle[], additions: ContentItemBundle[]): ContentItemBundle[] {
+  const seen = new Set<string>();
+  const merged: ContentItemBundle[] = [];
+  for (const item of [...additions, ...base]) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    merged.push(item);
+  }
+  return merged;
 }
