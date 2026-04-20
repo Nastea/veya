@@ -1,6 +1,6 @@
 "use client";
 
-import { GripVertical } from "lucide-react";
+import { CheckCircle2, GripVertical } from "lucide-react";
 import Link from "next/link";
 import type { HTMLAttributes } from "react";
 
@@ -32,18 +32,26 @@ export function CalendarContentCard({ bundle, dragHandleProps }: CalendarContent
       />
       <div className="space-y-2 p-2.5">
         <div className="flex items-center justify-between gap-2">
-          <span
-            className={[
-              "inline-flex rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em]",
-              bundle.item.contentType === "Reel"
-                ? "border-indigo-200/90 bg-indigo-50 text-indigo-700"
-                : bundle.item.contentType === "Carousel"
-                  ? "border-amber-200/90 bg-amber-50 text-amber-700"
-                  : "border-zinc-200/90 bg-zinc-50 text-zinc-700"
-            ].join(" ")}
-          >
-            {bundle.item.contentType}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span
+              className={[
+                "inline-flex rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em]",
+                bundle.item.contentType === "Reel"
+                  ? "border-indigo-200/90 bg-indigo-50 text-indigo-700"
+                  : bundle.item.contentType === "Carousel"
+                    ? "border-amber-200/90 bg-amber-50 text-amber-700"
+                    : "border-zinc-200/90 bg-zinc-50 text-zinc-700"
+              ].join(" ")}
+            >
+              {bundle.item.contentType}
+            </span>
+            {bundle.item.status === "Done" ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200/90 bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
+                <CheckCircle2 className="h-3 w-3" strokeWidth={2} />
+                Done
+              </span>
+            ) : null}
+          </div>
           {dragHandleProps ? (
             <button
               type="button"
