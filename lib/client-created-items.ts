@@ -35,6 +35,13 @@ export function saveCreatedItem(nextItem: ContentItemBundle): void {
   window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
 }
 
+export function deleteCreatedItem(id: string): void {
+  if (!canUseStorage()) return;
+  const existing = getCreatedItems();
+  const next = existing.filter((item) => item.id !== id);
+  window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+}
+
 function normalizeBundle(bundle: ContentItemBundle, defaultProfileId: string): ContentItemBundle {
   const instagramProfileId = bundle.item.instagramProfileId ?? bundle.item.profileId ?? defaultProfileId;
   return {

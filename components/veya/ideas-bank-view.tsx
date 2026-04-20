@@ -9,9 +9,9 @@ import { SectionCard } from "@/components/veya/section-card";
 import type { ContentFormat, ContentItemBundle, ContentStatus } from "@/data/content-types";
 import { getDefaultProfileId, listInstagramProfiles } from "@/data/instagram-profiles";
 import { applyChecklistAutoCompletion } from "@/lib/checklist-auto-completion";
-import { getCreatedItems, saveCreatedItem } from "@/lib/client-created-items";
+import { deleteCreatedItem, getCreatedItems, saveCreatedItem } from "@/lib/client-created-items";
 import { createChecklistForType } from "@/lib/checklist-templates";
-import { insertSupabaseContentItem, listSupabaseContentItems } from "@/lib/supabase-content-items";
+import { deleteSupabaseContentItem, insertSupabaseContentItem, listSupabaseContentItems } from "@/lib/supabase-content-items";
 import { importVeyaCsv } from "@/lib/veya-csv-import";
 
 const STATUS_FILTERS: Array<"All" | ContentStatus> = ["All", "Idea", "Planned", "Filmed", "Done"];
@@ -240,6 +240,22 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
     }
   }
 
+  async function handleDeleteIdea(id: string) {
+    setAllItems((prev) => prev.filter((item) => item.id !== id));
+    deleteCreatedItem(id);
+    if (id.startsWith("supa-")) {
+      try {
+        await deleteSupabaseContentItem(id);
+        setImportFeedback("Idea deleted");
+      } catch {
+        setImportFeedback("Delete failed on Supabase. Removed locally.");
+      }
+    } else {
+      setImportFeedback("Idea deleted");
+    }
+    window.setTimeout(() => setImportFeedback(null), 2000);
+  }
+
   return (
     <>
       <div className="space-y-8 px-5 py-8 sm:px-7 sm:py-10 lg:px-9 lg:py-12">
@@ -353,7 +369,7 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {sorted.map((bundle) => (
-              <IdeaCard key={bundle.id} bundle={bundle} />
+              <IdeaCard key={bundle.id} bundle={bundle} onDelete={handleDeleteIdea} />
             ))}
           </div>
         )}
@@ -574,32 +590,40 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
   );
 }
 
-function IdeaCard({ bundle }: { bundle: ContentItemBundle }) {
+function IdeaCard({ bundle, onDelete }: { bundle: ContentItemBundle; onDelete: (id: string) => void }) {
   return (
-    <Link
-      href={`/content/${bundle.id}`}
-      className="group overflow-hidden rounded-2xl border border-zinc-200/70 bg-white transition-colors hover:border-zinc-300"
-    >
-      <ContentPreviewCard
-        title={bundle.item.title}
-        item={bundle.item}
-        assets={bundle.assets}
-        aspectClassName="aspect-[4/3]"
-        variant="ideas"
-      />
-      <div className="space-y-2 px-4 py-4">
-        <p className="line-clamp-2 text-[13px] font-medium leading-snug text-zinc-900">{bundle.item.title}</p>
-        <p className="text-[11px] text-zinc-500">
-          {bundle.item.contentType} · {bundle.item.platform.join(" · ")}
-        </p>
-        <div className="flex items-center justify-between gap-2">
-          <span className="rounded-full border border-zinc-200/90 bg-zinc-50 px-2 py-0.5 text-[11px] text-zinc-600">
-            {bundle.item.status}
-          </span>
-          <span className="text-[11px] text-zinc-400">{bundle.item.scheduledDate ?? "Unscheduled"}</span>
+    <div className="group overflow-hidden rounded-2xl border border-zinc-200/70 bg-white transition-colors hover:border-zinc-300">
+      <Link href={`/content/${bundle.id}`} className="block">
+        <ContentPreviewCard
+          title={bundle.item.title}
+          item={bundle.item}
+          assets={bundle.assets}
+          aspectClassName="aspect-[4/3]"
+          variant="ideas"
+        />
+        <div className="space-y-2 px-4 py-4">
+          <p className="line-clamp-2 text-[13px] font-medium leading-snug text-zinc-900">{bundle.item.title}</p>
+          <p className="text-[11px] text-zinc-500">
+            {bundle.item.contentType} · {bundle.item.platform.join(" · ")}
+          </p>
+          <div className="flex items-center justify-between gap-2">
+            <span className="rounded-full border border-zinc-200/90 bg-zinc-50 px-2 py-0.5 text-[11px] text-zinc-600">
+              {bundle.item.status}
+            </span>
+            <span className="text-[11px] text-zinc-400">{bundle.item.scheduledDate ?? "Unscheduled"}</span>
+          </div>
         </div>
+      </Link>
+      <div className="border-t border-zinc-100 px-4 py-2.5">
+        <button
+          type="button"
+          onClick={() => void onDelete(bundle.id)}
+          className="text-[11px] font-medium text-rose-600 transition-colors hover:text-rose-700"
+        >
+          Delete idea
+        </button>
       </div>
-    </Link>
+    </div>
   );
 }
 
