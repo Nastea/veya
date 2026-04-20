@@ -30,6 +30,20 @@ const DEFAULT_TARGETS: ProfileTargets = {
   workMonthStartDay: 1
 };
 
+const PROFILE_DEFAULT_TARGETS: Record<string, ProfileTargets> = {
+  ecaterina: {
+    reelsPerWeek: 3,
+    carouselsPerWeek: 2,
+    filmingDaysPerMonth: 3,
+    workMonthStartDay: 15
+  }
+};
+
+function getDefaultTargetsForProfile(profileId: string): ProfileTargets {
+  const normalized = resolveInstagramProfileId(profileId);
+  return PROFILE_DEFAULT_TARGETS[normalized] ?? DEFAULT_TARGETS;
+}
+
 export function ReportingView({ items = [] }: ReportingViewProps) {
   const [allItems, setAllItems] = useState<ContentItemBundle[]>(items);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -77,7 +91,7 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
     window.sessionStorage.setItem(TARGETS_KEY, JSON.stringify(targetsByProfile));
   }, [targetsByProfile]);
 
-  const currentTargets = targetsByProfile[profileId] ?? DEFAULT_TARGETS;
+  const currentTargets = targetsByProfile[profileId] ?? getDefaultTargetsForProfile(profileId);
 
   const period = useMemo(
     () => resolvePeriod(anchorDate, mode, currentTargets.workMonthStartDay, customStartDate, customEndDate),
@@ -122,7 +136,7 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
   function updateTargets(patch: Partial<ProfileTargets>) {
     setTargetsByProfile((prev) => ({
       ...prev,
-      [profileId]: { ...(prev[profileId] ?? DEFAULT_TARGETS), ...patch }
+      [profileId]: { ...(prev[profileId] ?? getDefaultTargetsForProfile(profileId)), ...patch }
     }));
   }
 
