@@ -21,13 +21,28 @@ type ProfileTargets = {
   workMonthStartDay: number;
 };
 
+type ManualAdjustment = {
+  reels: number;
+  carousels: number;
+  posts: number;
+  filmingDays: number;
+};
+
 const TARGETS_KEY = "veya-profile-targets";
+const MANUAL_ADJUSTMENTS_KEY = "veya-reporting-manual-adjustments";
 
 const DEFAULT_TARGETS: ProfileTargets = {
   reelsPerWeek: 3,
   carouselsPerWeek: 2,
   filmingDaysPerMonth: 6,
   workMonthStartDay: 1
+};
+
+const EMPTY_MANUAL_ADJUSTMENT: ManualAdjustment = {
+  reels: 0,
+  carousels: 0,
+  posts: 0,
+  filmingDays: 0
 };
 
 const PROFILE_DEFAULT_TARGETS: Record<string, ProfileTargets> = {
@@ -54,6 +69,7 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
   const [customStartDate, setCustomStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [customEndDate, setCustomEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [targetsByProfile, setTargetsByProfile] = useState<Record<string, ProfileTargets>>({});
+  const [manualAdjustmentsByPeriod, setManualAdjustmentsByPeriod] = useState<Record<string, ManualAdjustment>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -78,6 +94,14 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
     } catch {
       // ignore malformed session state
     }
+    try {
+      const raw = window.sessionStorage.getItem(MANUAL_ADJUSTMENTS_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Record<string, ManualAdjustment>;
+      setManualAdjustmentsByPeriod(parsed);
+    } catch {
+      // ignore malformed session state
+    }
     return () => {
       cancelled = true;
     };
@@ -91,12 +115,26 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
     window.sessionStorage.setItem(TARGETS_KEY, JSON.stringify(targetsByProfile));
   }, [targetsByProfile]);
 
+  useEffect(() => {
+    window.sessionStorage.setItem(MANUAL_ADJUSTMENTS_KEY, JSON.stringify(manualAdjustmentsByPeriod));
+  }, [manualAdjustmentsByPeriod]);
+
   const currentTargets = targetsByProfile[profileId] ?? getDefaultTargetsForProfile(profileId);
 
   const period = useMemo(
     () => resolvePeriod(anchorDate, mode, currentTargets.workMonthStartDay, customStartDate, customEndDate),
     [anchorDate, mode, currentTargets.workMonthStartDay, customStartDate, customEndDate]
   );
+  const periodKey = useMemo(
+    () =>
+      [
+        resolveInstagramProfileId(profileId),
+        period.start.toISOString().slice(0, 10),
+        period.end.toISOString().slice(0, 10)
+      ].join("__"),
+    [period.end, period.start, profileId]
+  );
+  const manualAdjustment = manualAdjustmentsByPeriod[periodKey] ?? EMPTY_MANUAL_ADJUSTMENT;
 
   const scopedItems = useMemo(
     () =>
@@ -113,6 +151,10 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
   const carouselsCount = scopedItems.filter((bundle) => bundle.item.contentType === "Carousel").length;
   const postsCount = scopedItems.filter((bundle) => bundle.item.contentType === "Post").length;
   const filmingDaysCount = countFilmingDays(scopedItems, period.start, period.end);
+  const reelsTotal = reelsCount + manualAdjustment.reels;
+  const carouselsTotal = carouselsCount + manualAdjustment.carousels;
+  const postsTotal = postsCount + manualAdjustment.posts;
+  const filmingDaysTotal = filmingDaysCount + manualAdjustment.filmingDays;
 
   const weeksInPeriod = Math.max(1, Math.ceil((period.end.getTime() - period.start.getTime()) / (7 * 24 * 60 * 60 * 1000)));
   const sortedScopedItems = useMemo(
@@ -149,6 +191,22 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
     const normalized =
       key === "workMonthStartDay" ? Math.min(28, Math.max(1, Math.round(asNumber))) : Math.max(0, Math.round(asNumber));
     updateTargets({ [key]: normalized });
+  }
+
+  function updateManualAdjustment(patch: Partial<ManualAdjustment>) {
+    setManualAdjustmentsByPeriod((prev) => ({
+      ...prev,
+      [periodKey]: { ...(prev[periodKey] ?? EMPTY_MANUAL_ADJUSTMENT), ...patch }
+    }));
+  }
+
+  function handleManualAdjustmentInput(
+    event: ChangeEvent<HTMLInputElement>,
+    key: keyof ManualAdjustment
+  ) {
+    const asNumber = Number(event.target.value);
+    if (!Number.isFinite(asNumber)) return;
+    updateManualAdjustment({ [key]: Math.max(0, Math.round(asNumber)) });
   }
 
   return (
@@ -227,11 +285,40 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
         </div>
       </SectionCard>
 
+      <SectionCard className="px-6 py-6">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-zinc-400">Manual additions</p>
+          <p className="text-[12px] text-zinc-500">Applied only to current reporting period</p>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <TargetInput
+            label="Extra reels"
+            value={manualAdjustment.reels}
+            onChange={(event) => handleManualAdjustmentInput(event, "reels")}
+          />
+          <TargetInput
+            label="Extra carousels"
+            value={manualAdjustment.carousels}
+            onChange={(event) => handleManualAdjustmentInput(event, "carousels")}
+          />
+          <TargetInput
+            label="Extra posts"
+            value={manualAdjustment.posts}
+            onChange={(event) => handleManualAdjustmentInput(event, "posts")}
+          />
+          <TargetInput
+            label="Extra filming days"
+            value={manualAdjustment.filmingDays}
+            onChange={(event) => handleManualAdjustmentInput(event, "filmingDays")}
+          />
+        </div>
+      </SectionCard>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <ProgressCard label="Reels created" completed={reelsCount} target={reelsTarget} />
-        <ProgressCard label="Carousels created" completed={carouselsCount} target={carouselsTarget} />
-        <ProgressCard label="Posts created" completed={postsCount} target={0} showTarget={false} />
-        <ProgressCard label="Filming days" completed={filmingDaysCount} target={filmingTarget} />
+        <ProgressCard label="Reels created" completed={reelsTotal} target={reelsTarget} />
+        <ProgressCard label="Carousels created" completed={carouselsTotal} target={carouselsTarget} />
+        <ProgressCard label="Posts created" completed={postsTotal} target={0} showTarget={false} />
+        <ProgressCard label="Filming days" completed={filmingDaysTotal} target={filmingTarget} />
       </div>
 
       <SectionCard className="px-6 py-6">
