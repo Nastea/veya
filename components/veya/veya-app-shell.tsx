@@ -7,6 +7,8 @@ import { InstagramProfileProvider } from "@/components/veya/instagram-profile-co
 import { TopStatusBar } from "@/components/veya/top-status-bar";
 import { getDefaultProfileId, listInstagramProfiles } from "@/data/instagram-profiles";
 
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.1.0";
+
 type VeyaAppShellProps = {
   children: React.ReactNode;
   /** Shown in the thin top bar (left). */
@@ -52,6 +54,9 @@ export function VeyaAppShell({ children, contextLabel = "Veya", statusText = "Sa
             <div className="min-h-0 flex-1">{children}</div>
           </div>
         </div>
+        <span className="pointer-events-none fixed bottom-2 right-3 text-[10px] font-medium text-zinc-400/90">
+          v{APP_VERSION}
+        </span>
       </main>
     </InstagramProfileProvider>
   );
