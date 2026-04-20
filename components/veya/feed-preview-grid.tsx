@@ -126,7 +126,7 @@ export function FeedPreviewGrid({ items = [] }: FeedPreviewGridProps) {
           </div>
         </SectionCard>
       ) : (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-3">
           {sorted.map((b) => (
             <FeedSquareCard key={b.id} bundle={b} />
           ))}
