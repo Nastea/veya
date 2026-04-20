@@ -21,9 +21,6 @@ export function DashboardView() {
       <header className="max-w-2xl">
         <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-zinc-400">Overview</p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900">Veya</h1>
-        <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">
-          Plan content, attach media, and preview how posts read together — without leaving a calm workspace.
-        </p>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-3">
