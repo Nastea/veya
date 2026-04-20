@@ -161,11 +161,10 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
   const publishedReelsCount = publishedItems.filter((bundle) => bundle.item.contentType === "Reel").length;
   const publishedCarouselsCount = publishedItems.filter((bundle) => bundle.item.contentType === "Carousel").length;
   const publishedPostsCount = publishedItems.filter((bundle) => bundle.item.contentType === "Post").length;
-  const publishedFilmingDaysCount = countFilmingDays(publishedItems, period.start, period.end);
   const reelsTotal = publishedReelsCount + manualAdjustment.reels;
   const carouselsTotal = publishedCarouselsCount + manualAdjustment.carousels;
   const postsTotal = publishedPostsCount + manualAdjustment.posts;
-  const filmingDaysTotal = publishedFilmingDaysCount + manualAdjustment.filmingDays;
+  const filmingDaysTotal = manualAdjustment.filmingDays;
   const doneCount = doneItems.length;
 
   const weeksInPeriod = Math.max(1, Math.ceil((period.end.getTime() - period.start.getTime()) / (7 * 24 * 60 * 60 * 1000)));
@@ -330,7 +329,7 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
         <ProgressCard label="Reels published" completed={reelsTotal} target={reelsTarget} />
         <ProgressCard label="Carousels published" completed={carouselsTotal} target={carouselsTarget} />
         <ProgressCard label="Posts published" completed={postsTotal} target={0} showTarget={false} />
-        <ProgressCard label="Filming days (published)" completed={filmingDaysTotal} target={filmingTarget} />
+        <ProgressCard label="Filming days (manual)" completed={filmingDaysTotal} target={filmingTarget} />
         <ProgressCard label="Done items" completed={doneCount} target={0} showTarget={false} />
       </div>
 
