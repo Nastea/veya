@@ -146,15 +146,27 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
       ),
     [allItems, profileId, period.end, period.start]
   );
+  const now = Date.now();
+  const publishedItems = useMemo(
+    () =>
+      scopedItems.filter((bundle) => {
+        if (!bundle.item.scheduledAt) return false;
+        const publishTime = new Date(bundle.item.scheduledAt).getTime();
+        return Number.isFinite(publishTime) && publishTime <= now;
+      }),
+    [now, scopedItems]
+  );
+  const doneItems = useMemo(() => scopedItems.filter((bundle) => bundle.item.status === "Done"), [scopedItems]);
 
-  const reelsCount = scopedItems.filter((bundle) => bundle.item.contentType === "Reel").length;
-  const carouselsCount = scopedItems.filter((bundle) => bundle.item.contentType === "Carousel").length;
-  const postsCount = scopedItems.filter((bundle) => bundle.item.contentType === "Post").length;
-  const filmingDaysCount = countFilmingDays(scopedItems, period.start, period.end);
-  const reelsTotal = reelsCount + manualAdjustment.reels;
-  const carouselsTotal = carouselsCount + manualAdjustment.carousels;
-  const postsTotal = postsCount + manualAdjustment.posts;
-  const filmingDaysTotal = filmingDaysCount + manualAdjustment.filmingDays;
+  const publishedReelsCount = publishedItems.filter((bundle) => bundle.item.contentType === "Reel").length;
+  const publishedCarouselsCount = publishedItems.filter((bundle) => bundle.item.contentType === "Carousel").length;
+  const publishedPostsCount = publishedItems.filter((bundle) => bundle.item.contentType === "Post").length;
+  const publishedFilmingDaysCount = countFilmingDays(publishedItems, period.start, period.end);
+  const reelsTotal = publishedReelsCount + manualAdjustment.reels;
+  const carouselsTotal = publishedCarouselsCount + manualAdjustment.carousels;
+  const postsTotal = publishedPostsCount + manualAdjustment.posts;
+  const filmingDaysTotal = publishedFilmingDaysCount + manualAdjustment.filmingDays;
+  const doneCount = doneItems.length;
 
   const weeksInPeriod = Math.max(1, Math.ceil((period.end.getTime() - period.start.getTime()) / (7 * 24 * 60 * 60 * 1000)));
   const sortedScopedItems = useMemo(
@@ -314,11 +326,12 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
         </div>
       </SectionCard>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <ProgressCard label="Reels created" completed={reelsTotal} target={reelsTarget} />
-        <ProgressCard label="Carousels created" completed={carouselsTotal} target={carouselsTarget} />
-        <ProgressCard label="Posts created" completed={postsTotal} target={0} showTarget={false} />
-        <ProgressCard label="Filming days" completed={filmingDaysTotal} target={filmingTarget} />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <ProgressCard label="Reels published" completed={reelsTotal} target={reelsTarget} />
+        <ProgressCard label="Carousels published" completed={carouselsTotal} target={carouselsTarget} />
+        <ProgressCard label="Posts published" completed={postsTotal} target={0} showTarget={false} />
+        <ProgressCard label="Filming days (published)" completed={filmingDaysTotal} target={filmingTarget} />
+        <ProgressCard label="Done items" completed={doneCount} target={0} showTarget={false} />
       </div>
 
       <SectionCard className="px-6 py-6">
