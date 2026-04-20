@@ -1,6 +1,8 @@
 "use client";
 
 import { type ChangeEvent, useEffect, useMemo, useState } from "react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 import { useInstagramProfile } from "@/components/veya/instagram-profile-context";
 import { SectionCard } from "@/components/veya/section-card";
@@ -227,6 +229,98 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
     updateManualAdjustment({ [key]: Math.max(0, Math.round(asNumber)) });
   }
 
+  function handleDownloadPdf() {
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    const exportedAt = new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(new Date());
+
+    doc.setFontSize(16);
+    doc.text("Veya Reporting", 40, 36);
+    doc.setFontSize(10);
+    doc.text(`Profile: ${getInstagramProfileById(profileId)?.name ?? profileId}`, 40, 54);
+    doc.text(`Period: ${formatRange(period.start, period.end)}`, 40, 68);
+    doc.text(`Exported: ${exportedAt}`, 40, 82);
+
+    autoTable(doc, {
+      startY: 94,
+      theme: "grid",
+      head: [["Metric", "Completed", "Target"]],
+      body: [
+        ["Reels published", String(reelsTotal), String(reelsTarget)],
+        ["Carousels published", String(carouselsTotal), String(carouselsTarget)],
+        ["Posts published", String(postsTotal), "-"],
+        ["Filming days (manual)", String(filmingDaysTotal), String(filmingTarget)],
+        ["Done reels", String(doneReelsCount), "-"],
+        ["Done carousels", String(doneCarouselsCount), "-"]
+      ],
+      styles: { fontSize: 9, cellPadding: 5 }
+    });
+
+    autoTable(doc, {
+      startY: (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY
+        ? (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 14
+        : 220,
+      theme: "striped",
+      head: [[
+        "Title",
+        "Status",
+        "Type",
+        "Profile",
+        "Platform",
+        "Planned",
+        "Filming",
+        "Ready",
+        "In preview",
+        "Caption",
+        "Script",
+        "Comments",
+        "Notes",
+        "Drive"
+      ]],
+      body: sortedScopedItems.map((bundle) => {
+        const profile = getInstagramProfileById(bundle.item.instagramProfileId ?? bundle.item.profileId ?? "");
+        return [
+          bundle.item.title || "-",
+          bundle.item.status || "-",
+          bundle.item.contentType || "-",
+          profile?.name ?? (bundle.item.instagramProfileId ?? bundle.item.profileId ?? "-"),
+          bundle.item.platform.join(", ") || "-",
+          bundle.item.scheduledDate ?? "-",
+          bundle.item.filmingDate ?? "-",
+          bundle.item.ready ? "Yes" : "No",
+          bundle.item.includeInPreview ? "Yes" : "No",
+          bundle.item.caption || "-",
+          bundle.item.script || "-",
+          bundle.item.description || "-",
+          bundle.item.notes || "-",
+          bundle.item.driveLink || bundle.item.assetFolderUrl || bundle.item.googleDriveUrl || "-"
+        ];
+      }),
+      styles: { fontSize: 8, cellPadding: 4, overflow: "linebreak" },
+      headStyles: { fillColor: [39, 39, 42] },
+      columnStyles: {
+        0: { cellWidth: 130 },
+        9: { cellWidth: 120 },
+        10: { cellWidth: 120 },
+        11: { cellWidth: 120 },
+        12: { cellWidth: 120 },
+        13: { cellWidth: 140 }
+      }
+    });
+
+    const safeProfile = (getInstagramProfileById(profileId)?.name ?? profileId).replace(/\s+/g, "-").toLowerCase();
+    const start = period.start.toISOString().slice(0, 10);
+    const endInclusive = new Date(period.end);
+    endInclusive.setUTCDate(endInclusive.getUTCDate() - 1);
+    const end = endInclusive.toISOString().slice(0, 10);
+    doc.save(`veya-report-${safeProfile}-${start}-to-${end}.pdf`);
+  }
+
   return (
     <div className="space-y-8 px-5 py-8 sm:px-7 sm:py-10 lg:px-9 lg:py-12">
       <header className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -238,6 +332,13 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            className="h-9 rounded-lg border border-zinc-900/90 bg-zinc-900 px-3 text-[12px] font-medium text-white transition-colors hover:bg-zinc-800"
+          >
+            Download PDF
+          </button>
           <select
             value={mode}
             onChange={(event) => setMode(event.target.value as ReportingMode)}
