@@ -2,7 +2,7 @@
 
 import type { ContentFormat, ContentItemBundle, ContentStatus } from "@/data/content-types";
 import { getDefaultProfileId } from "@/data/instagram-profiles";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseClient } from "@/lib/supabase";
 import { createChecklistForType } from "@/lib/checklist-templates";
 
 type SupabaseContentItemRow = {
@@ -45,6 +45,7 @@ type InsertSupabaseContentItemInput = {
 };
 
 export async function listSupabaseContentItems(): Promise<ContentItemBundle[]> {
+  const supabase = requireSupabaseClient();
   const { data, error } = await supabase
     .from("content_items")
     .select(
@@ -57,6 +58,7 @@ export async function listSupabaseContentItems(): Promise<ContentItemBundle[]> {
 }
 
 export async function getSupabaseContentItemById(id: string): Promise<ContentItemBundle | null> {
+  const supabase = requireSupabaseClient();
   const rawId = id.startsWith("supa-") ? id.slice(5) : id;
   const { data, error } = await supabase
     .from("content_items")
@@ -72,6 +74,7 @@ export async function getSupabaseContentItemById(id: string): Promise<ContentIte
 }
 
 export async function insertSupabaseContentItem(input: InsertSupabaseContentItemInput): Promise<ContentItemBundle> {
+  const supabase = requireSupabaseClient();
   const { data, error } = await supabase
     .from("content_items")
     .insert({
@@ -102,6 +105,7 @@ export async function insertSupabaseContentItem(input: InsertSupabaseContentItem
 }
 
 export async function updateSupabaseContentItem(bundle: ContentItemBundle): Promise<void> {
+  const supabase = requireSupabaseClient();
   const rawId = bundle.id.startsWith("supa-") ? bundle.id.slice(5) : bundle.id;
   const plannedDate = bundle.item.scheduledAt ? bundle.item.scheduledAt.slice(0, 10) : null;
   const filmingDate = bundle.item.filmingDate ? bundle.item.filmingDate.slice(0, 10) : null;
@@ -132,9 +136,16 @@ export async function updateSupabaseContentItem(bundle: ContentItemBundle): Prom
 }
 
 export async function deleteSupabaseContentItem(id: string): Promise<void> {
+  const supabase = requireSupabaseClient();
   const rawId = id.startsWith("supa-") ? id.slice(5) : id;
   const { error } = await supabase.from("content_items").delete().eq("id", rawId);
   if (error) throw error;
+}
+
+function requireSupabaseClient(): any {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client is not configured.");
+  return supabase;
 }
 
 function mapRowToBundle(row: SupabaseContentItemRow): ContentItemBundle {
