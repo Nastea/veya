@@ -56,3 +56,18 @@ on public.content_items
 for insert
 to anon
 with check (true);
+
+drop policy if exists "content_items_update_anon" on public.content_items;
+create policy "content_items_update_anon"
+on public.content_items
+for update
+to anon
+using (true)
+with check (true);
+
+drop policy if exists "content_items_delete_anon" on public.content_items;
+create policy "content_items_delete_anon"
+on public.content_items
+for delete
+to anon
+using (true);

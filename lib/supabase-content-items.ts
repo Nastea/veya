@@ -46,12 +46,7 @@ type InsertSupabaseContentItemInput = {
 
 export async function listSupabaseContentItems(): Promise<ContentItemBundle[]> {
   const supabase = requireSupabaseClient();
-  const { data, error } = await supabase
-    .from("content_items")
-    .select(
-      "id, external_id, import_source, title, content_type, instagram_profile_id, status, planned_date, caption, script, description, notes, filming_date, asset_source, asset_folder_url, drive_link, cover_image_url"
-    )
-    .order("planned_date", { ascending: true, nullsFirst: false });
+  const { data, error } = await supabase.from("content_items").select("*").order("planned_date", { ascending: true, nullsFirst: false });
 
   if (error) throw error;
   return (data as SupabaseContentItemRow[]).map((row) => mapRowToBundle(row));
@@ -60,13 +55,7 @@ export async function listSupabaseContentItems(): Promise<ContentItemBundle[]> {
 export async function getSupabaseContentItemById(id: string): Promise<ContentItemBundle | null> {
   const supabase = requireSupabaseClient();
   const rawId = id.startsWith("supa-") ? id.slice(5) : id;
-  const { data, error } = await supabase
-    .from("content_items")
-    .select(
-      "id, external_id, import_source, title, content_type, instagram_profile_id, status, planned_date, caption, script, description, notes, filming_date, asset_source, asset_folder_url, drive_link, cover_image_url"
-    )
-    .eq("id", rawId)
-    .maybeSingle();
+  const { data, error } = await supabase.from("content_items").select("*").eq("id", rawId).maybeSingle();
 
   if (error) throw error;
   if (!data) return null;
@@ -95,9 +84,7 @@ export async function insertSupabaseContentItem(input: InsertSupabaseContentItem
       drive_link: input.driveLink,
       cover_image_url: input.coverImageUrl
     })
-    .select(
-      "id, external_id, import_source, title, content_type, instagram_profile_id, status, planned_date, caption, script, description, notes, filming_date, asset_source, asset_folder_url, drive_link, cover_image_url"
-    )
+    .select("*")
     .single();
 
   if (error) throw error;
