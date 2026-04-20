@@ -81,7 +81,7 @@ export function ContentItemPageClient({ id, initialBundle }: ContentItemPageClie
         setStatusText("Syncing...");
         void updateSupabaseContentItem(updated)
           .then(() => setStatusText("Synced"))
-          .catch(() => setStatusText("Sync failed"));
+          .catch((error) => setStatusText(error instanceof Error ? error.message : "Sync failed"));
       }
       return updated;
     });
@@ -95,7 +95,7 @@ export function ContentItemPageClient({ id, initialBundle }: ContentItemPageClie
         setStatusText("Syncing...");
         void updateSupabaseContentItem(updated)
           .then(() => setStatusText("Synced"))
-          .catch(() => setStatusText("Sync failed"));
+          .catch((error) => setStatusText(error instanceof Error ? error.message : "Sync failed"));
       }
       return updated;
     });

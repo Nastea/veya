@@ -120,7 +120,7 @@ export async function updateSupabaseContentItem(bundle: ContentItemBundle): Prom
   const plannedDate = bundle.item.scheduledAt ? bundle.item.scheduledAt.slice(0, 10) : null;
   const filmingDate = bundle.item.filmingDate ? bundle.item.filmingDate.slice(0, 10) : null;
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("content_items")
     .update({
       external_id: bundle.item.externalId,
@@ -140,9 +140,14 @@ export async function updateSupabaseContentItem(bundle: ContentItemBundle): Prom
       drive_link: bundle.item.driveLink,
       cover_image_url: bundle.item.coverImageUrl
     })
-    .eq("id", rawId);
+    .eq("id", rawId)
+    .select("id")
+    .maybeSingle();
 
   if (error) throw error;
+  if (!data) {
+    throw new Error("Update was blocked in Supabase. Apply the UPDATE RLS policy for table content_items.");
+  }
 }
 
 export async function deleteSupabaseContentItem(id: string): Promise<void> {
