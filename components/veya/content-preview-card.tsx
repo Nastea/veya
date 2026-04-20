@@ -11,6 +11,7 @@ type ContentPreviewCardProps = {
   assets: ContentAsset[];
   aspectClassName?: string;
   variant?: "calendar" | "feed" | "ideas";
+  forceTitlePlaceholder?: boolean;
 };
 
 export function ContentPreviewCard({
@@ -18,13 +19,15 @@ export function ContentPreviewCard({
   item,
   assets,
   aspectClassName = "aspect-[4/5]",
-  variant = "ideas"
+  variant = "ideas",
+  forceTitlePlaceholder = false
 }: ContentPreviewCardProps) {
   const preview = resolvePreviewAsset(item, assets);
   const hasCoverImage = Boolean(item.coverImageUrl);
   const isFeed = variant === "feed";
   const feedShowsPlaceholder = isFeed && !hasCoverImage;
   const effectivePreview = isFeed ? undefined : preview;
+  const showTitlePlaceholder = (feedShowsPlaceholder || !effectivePreview || forceTitlePlaceholder) && !hasCoverImage;
   const isVideo = preview?.type === "video";
   const reelVideoFallback = item.contentType === "Reel" && isVideo && !item.coverAssetId && !hasCoverImage;
 
@@ -38,7 +41,7 @@ export function ContentPreviewCard({
     >
       {hasCoverImage ? (
         <img src={item.coverImageUrl} alt={title} className="absolute inset-0 h-full w-full object-cover" />
-      ) : feedShowsPlaceholder || !effectivePreview ? (
+      ) : showTitlePlaceholder ? (
         <div className="absolute inset-0 flex items-center justify-center bg-[#f1f1f3] px-7 text-center">
           <p className="text-balance text-lg font-medium leading-snug tracking-tight text-zinc-500 sm:text-xl">{title}</p>
         </div>

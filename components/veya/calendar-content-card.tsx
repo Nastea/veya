@@ -29,6 +29,7 @@ export function CalendarContentCard({ bundle, dragHandleProps }: CalendarContent
         assets={bundle.assets}
         aspectClassName="aspect-[4/5] w-full"
         variant="calendar"
+        forceTitlePlaceholder
       />
       <div className="space-y-2 p-2.5">
         <div className="flex items-center justify-between gap-2">
