@@ -195,7 +195,7 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
     if (!file) return;
     try {
       const text = await file.text();
-      const imported = importVeyaCsv(text);
+      const imported = importVeyaCsv(text, { defaultProfileId: selectedProfileId });
       if (imported.length === 0) {
         setImportFeedback("No rows imported");
       } else {
@@ -214,7 +214,7 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
   function handleCsvPasteImport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
-      const imported = importVeyaCsv(csvText);
+      const imported = importVeyaCsv(csvText, { defaultProfileId: selectedProfileId });
       if (imported.length === 0) {
         setImportFeedback("No rows imported");
       } else {

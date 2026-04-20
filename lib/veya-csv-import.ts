@@ -6,10 +6,13 @@ import { applyChecklistAutoCompletion } from "@/lib/checklist-auto-completion";
 import { createChecklistForType } from "@/lib/checklist-templates";
 
 type CsvRow = Record<string, string>;
+type ImportOptions = {
+  defaultProfileId?: string;
+};
 
 const REQUIRED_HEADERS = ["externalid", "title", "contenttype", "status"] as const;
 
-export function importVeyaCsv(text: string): ContentItemBundle[] {
+export function importVeyaCsv(text: string, options: ImportOptions = {}): ContentItemBundle[] {
   const rows = parseCsv(text);
   if (rows.length === 0) return [];
 
@@ -20,15 +23,15 @@ export function importVeyaCsv(text: string): ContentItemBundle[] {
     throw new Error(`Missing CSV headers: ${missing.join(", ")}`);
   }
 
-  return rows.map((row, index) => rowToBundle(row, index));
+  return rows.map((row, index) => rowToBundle(row, index, options));
 }
 
-function rowToBundle(row: CsvRow, index: number): ContentItemBundle {
+function rowToBundle(row: CsvRow, index: number, options: ImportOptions): ContentItemBundle {
   const contentType = toContentType(row.contenttype);
   const status = toStatus(row.status);
   const externalId = row.externalid || `row-${index + 1}`;
   const id = `created-${slug(externalId)}-${Date.now().toString(36)}-${index}`;
-  const profileId = resolveProfileId(row.instagramprofileid || row.instagramprofile);
+  const profileId = resolveProfileId(row.instagramprofileid || row.instagramprofile, options.defaultProfileId);
   const plannedDate = row.planneddate || "";
   const filmingDate = row.filmingdate || "";
   const driveUrl = row.drivelink || row.assetfolderurl || "";
@@ -155,9 +158,9 @@ function toStatus(value: string): ContentStatus {
   return "Idea";
 }
 
-function resolveProfileId(raw: string): string {
+function resolveProfileId(raw: string, fallbackProfileId?: string): string {
   const value = raw.trim();
-  if (!value) return getDefaultProfileId();
+  if (!value) return fallbackProfileId || getDefaultProfileId();
   const profiles = listInstagramProfiles();
   const byId = profiles.find((profile) => profile.id.toLowerCase() === value.toLowerCase());
   if (byId) return byId.id;
@@ -165,7 +168,7 @@ function resolveProfileId(raw: string): string {
   if (byHandle) return byHandle.id;
   const byName = profiles.find((profile) => profile.name.toLowerCase() === value.toLowerCase());
   if (byName) return byName.id;
-  return getDefaultProfileId();
+  return fallbackProfileId || getDefaultProfileId();
 }
 
 function slug(input: string): string {
