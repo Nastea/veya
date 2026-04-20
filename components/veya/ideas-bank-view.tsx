@@ -444,7 +444,7 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
             </button>
           </SectionCard>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="space-y-3">
             {sorted.map((bundle) => (
               <IdeaCard
                 key={bundle.id}
@@ -686,26 +686,25 @@ function IdeaCard({
 }) {
   return (
     <div className="group overflow-hidden rounded-xl border border-zinc-200/70 bg-white transition-colors hover:border-zinc-300">
-      <Link href={`/content/${bundle.id}`} className="block">
-        <ContentPreviewCard
-          title={bundle.item.title}
-          item={bundle.item}
-          assets={bundle.assets}
-          aspectClassName="aspect-[4/5]"
-          variant="ideas"
-        />
-        <div className="space-y-1.5 px-3 py-3">
-          <p className="line-clamp-2 text-[12px] font-medium leading-snug text-zinc-900">{bundle.item.title}</p>
-          <p className="text-[10px] text-zinc-500">
-            {bundle.item.contentType} · {bundle.item.platform.join(" · ")}
-          </p>
-          <div className="flex items-center justify-between gap-2">
-            <span className="rounded-full border border-zinc-200/90 bg-zinc-50 px-1.5 py-0.5 text-[10px] text-zinc-600">
-              {bundle.item.status}
-            </span>
-            <span className="text-[10px] text-zinc-400">{bundle.item.scheduledDate ?? "Unscheduled"}</span>
-          </div>
+      <Link href={`/content/${bundle.id}`} className="flex items-center gap-3 p-3">
+        <div className="w-[88px] shrink-0 overflow-hidden rounded-lg">
+          <ContentPreviewCard
+            title={bundle.item.title}
+            item={bundle.item}
+            assets={bundle.assets}
+            aspectClassName="aspect-[4/5]"
+            variant="ideas"
+          />
         </div>
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-1 text-[13px] font-medium leading-snug text-zinc-900">{bundle.item.title}</p>
+          <p className="mt-0.5 text-[11px] text-zinc-500">
+            {bundle.item.contentType} · {bundle.item.platform.join(" · ")} · {bundle.item.scheduledDate ?? "Unscheduled"}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-zinc-200/90 bg-zinc-50 px-2 py-0.5 text-[10px] text-zinc-600">
+          {bundle.item.status}
+        </span>
       </Link>
       <div className="flex items-center justify-between border-t border-zinc-100 px-3 py-2">
         <label className="inline-flex items-center gap-1.5 text-[10px] text-zinc-600">
