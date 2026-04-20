@@ -74,6 +74,7 @@ export function CalendarPlanningView({
   const router = useRouter();
   const { selectedProfileId } = useInstagramProfile();
   const [allItems, setAllItems] = useState<ContentItemBundle[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [year, setYear] = useState(initialYear);
   const [monthIndex, setMonthIndex] = useState(initialMonthIndex);
   const [platformFilter, setPlatformFilter] = useState<(typeof PLATFORM_FILTERS)[number]>("All");
@@ -95,10 +96,12 @@ export function CalendarPlanningView({
       try {
         const remoteItems = await listSupabaseContentItems();
         if (cancelled) return;
+        setLoadError(null);
         setAllItems(remoteItems);
-      } catch {
+      } catch (error) {
         if (cancelled) return;
         setAllItems([]);
+        setLoadError(error instanceof Error ? error.message : "Could not load data from Supabase.");
       }
     }
     void load();
@@ -361,6 +364,7 @@ export function CalendarPlanningView({
           </button>
         </div>
       </header>
+      {loadError ? <p className="text-[12px] text-rose-600">Supabase load error: {loadError}</p> : null}
 
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <SectionCard className="overflow-hidden p-0">

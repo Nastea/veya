@@ -9,6 +9,7 @@ import { listSupabaseContentItems } from "@/lib/supabase-content-items";
 
 export function DashboardView() {
   const [items, setItems] = useState<ContentItemBundle[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -16,10 +17,12 @@ export function DashboardView() {
       try {
         const remoteItems = await listSupabaseContentItems();
         if (cancelled) return;
+        setLoadError(null);
         setItems(remoteItems);
-      } catch {
+      } catch (error) {
         if (cancelled) return;
         setItems([]);
+        setLoadError(error instanceof Error ? error.message : "Could not load data from Supabase.");
       }
     }
     void load();
@@ -36,6 +39,7 @@ export function DashboardView() {
         <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-zinc-400">Overview</p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900">Veya</h1>
       </header>
+      {loadError ? <p className="text-[12px] text-rose-600">Supabase load error: {loadError}</p> : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <SectionCard className="p-6 lg:col-span-2">

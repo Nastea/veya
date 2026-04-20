@@ -43,6 +43,7 @@ function sortItems(items: ContentItemBundle[], sort: SortValue): ContentItemBund
 
 export function FeedPreviewGrid({ items = [] }: FeedPreviewGridProps) {
   const [allItems, setAllItems] = useState<ContentItemBundle[]>(items);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { selectedProfileId } = useInstagramProfile();
   const [platformFilter, setPlatformFilter] = useState<(typeof PLATFORM_FILTERS)[number]>("All");
   const [sort, setSort] = useState<SortValue>("scheduled-asc");
@@ -53,10 +54,12 @@ export function FeedPreviewGrid({ items = [] }: FeedPreviewGridProps) {
       try {
         const remoteItems = (await listSupabaseContentItems()).filter((item) => item.item.includeInPreview);
         if (cancelled) return;
+        setLoadError(null);
         setAllItems(remoteItems);
-      } catch {
+      } catch (error) {
         if (cancelled) return;
         setAllItems([]);
+        setLoadError(error instanceof Error ? error.message : "Could not load data from Supabase.");
       }
     }
     void load();
@@ -120,6 +123,7 @@ export function FeedPreviewGrid({ items = [] }: FeedPreviewGridProps) {
           </label>
         </div>
       </header>
+      {loadError ? <p className="text-[12px] text-rose-600">Supabase load error: {loadError}</p> : null}
 
       {sorted.length === 0 ? (
         <SectionCard className="max-w-2xl px-6 py-8">

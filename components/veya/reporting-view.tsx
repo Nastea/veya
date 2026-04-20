@@ -32,6 +32,7 @@ const DEFAULT_TARGETS: ProfileTargets = {
 
 export function ReportingView({ items = [] }: ReportingViewProps) {
   const [allItems, setAllItems] = useState<ContentItemBundle[]>(items);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { selectedProfileId } = useInstagramProfile();
   const [profileId, setProfileId] = useState<string>(selectedProfileId || getDefaultProfileId());
   const [mode, setMode] = useState<ReportingMode>("monthly");
@@ -46,10 +47,12 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
       try {
         const remoteItems = await listSupabaseContentItems();
         if (cancelled) return;
+        setLoadError(null);
         setAllItems(remoteItems);
-      } catch {
+      } catch (error) {
         if (cancelled) return;
         setAllItems([]);
+        setLoadError(error instanceof Error ? error.message : "Could not load data from Supabase.");
       }
     }
     void loadItems();
@@ -179,6 +182,7 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
           )}
         </div>
       </header>
+      {loadError ? <p className="text-[12px] text-rose-600">Supabase load error: {loadError}</p> : null}
 
       <SectionCard className="px-6 py-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

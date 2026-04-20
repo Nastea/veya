@@ -28,6 +28,7 @@ type IdeasBankViewProps = {
 
 export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
   const [allItems, setAllItems] = useState<ContentItemBundle[]>(items);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { selectedProfileId } = useInstagramProfile();
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>("All");
   const [platformFilter, setPlatformFilter] = useState<(typeof PLATFORM_FILTERS)[number]>("All");
@@ -55,10 +56,12 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
       try {
         const remoteItems = await listSupabaseContentItems();
         if (cancelled) return;
+        setLoadError(null);
         setAllItems(remoteItems);
-      } catch {
+      } catch (error) {
         if (cancelled) return;
         setAllItems([]);
+        setLoadError(error instanceof Error ? error.message : "Could not load data from Supabase.");
       }
     }
 
@@ -425,6 +428,7 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
             </button>
           </div>
         ) : null}
+        {loadError ? <p className="text-[12px] text-rose-600">Supabase load error: {loadError}</p> : null}
         {importFeedback ? <p className="text-[12px] text-zinc-500">{importFeedback}</p> : null}
 
         {sorted.length === 0 ? (
