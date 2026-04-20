@@ -7,6 +7,7 @@ import { useInstagramProfile } from "@/components/veya/instagram-profile-context
 import { ContentPreviewCard } from "@/components/veya/content-preview-card";
 import { SectionCard } from "@/components/veya/section-card";
 import type { ContentItemBundle } from "@/data/content-types";
+import { resolveInstagramProfileId } from "@/data/instagram-profiles";
 import { listSupabaseContentItems } from "@/lib/supabase-content-items";
 
 const PLATFORM_FILTERS = ["All", "Instagram", "Pinterest"] as const;
@@ -69,7 +70,8 @@ export function FeedPreviewGrid({ items = [] }: FeedPreviewGridProps) {
       allItems.filter(
         (b) =>
           matchesPlatform(b, platformFilter) &&
-          (b.item.instagramProfileId ?? b.item.profileId) === selectedProfileId
+          resolveInstagramProfileId(b.item.instagramProfileId ?? b.item.profileId) ===
+            resolveInstagramProfileId(selectedProfileId)
       ),
     [allItems, platformFilter, selectedProfileId]
   );

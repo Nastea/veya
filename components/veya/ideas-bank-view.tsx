@@ -7,7 +7,7 @@ import { ContentPreviewCard } from "@/components/veya/content-preview-card";
 import { useInstagramProfile } from "@/components/veya/instagram-profile-context";
 import { SectionCard } from "@/components/veya/section-card";
 import type { ContentFormat, ContentItemBundle, ContentStatus } from "@/data/content-types";
-import { getDefaultProfileId, listInstagramProfiles } from "@/data/instagram-profiles";
+import { getDefaultProfileId, listInstagramProfiles, resolveInstagramProfileId } from "@/data/instagram-profiles";
 import { applyChecklistAutoCompletion } from "@/lib/checklist-auto-completion";
 import { createChecklistForType } from "@/lib/checklist-templates";
 import {
@@ -78,7 +78,9 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
       const statusPass = statusFilter === "All" || item.item.status === statusFilter;
       const platformPass = platformFilter === "All" || item.item.platform.includes(platformFilter);
       const typePass = typeFilter === "All" || item.item.contentType === typeFilter;
-      const profilePass = (item.item.instagramProfileId ?? item.item.profileId) === selectedProfileId;
+      const profilePass =
+        resolveInstagramProfileId(item.item.instagramProfileId ?? item.item.profileId) ===
+        resolveInstagramProfileId(selectedProfileId);
       return statusPass && platformPass && typePass && profilePass;
     });
   }, [allItems, statusFilter, platformFilter, typeFilter, selectedProfileId]);

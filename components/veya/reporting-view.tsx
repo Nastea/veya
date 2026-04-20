@@ -5,7 +5,7 @@ import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useInstagramProfile } from "@/components/veya/instagram-profile-context";
 import { SectionCard } from "@/components/veya/section-card";
 import type { ContentItemBundle } from "@/data/content-types";
-import { getDefaultProfileId, getInstagramProfileById } from "@/data/instagram-profiles";
+import { getDefaultProfileId, getInstagramProfileById, resolveInstagramProfileId } from "@/data/instagram-profiles";
 import { listSupabaseContentItems } from "@/lib/supabase-content-items";
 
 type ReportingViewProps = {
@@ -85,7 +85,8 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
     () =>
       allItems.filter(
         (bundle) =>
-          (bundle.item.instagramProfileId ?? bundle.item.profileId) === profileId &&
+          resolveInstagramProfileId(bundle.item.instagramProfileId ?? bundle.item.profileId) ===
+            resolveInstagramProfileId(profileId) &&
           isWithinPeriod(bundle.item.scheduledAt, period.start, period.end)
       ),
     [allItems, profileId, period.end, period.start]

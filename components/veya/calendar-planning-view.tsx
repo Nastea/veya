@@ -11,7 +11,7 @@ import { CalendarContentCard } from "@/components/veya/calendar-content-card";
 import { useInstagramProfile } from "@/components/veya/instagram-profile-context";
 import { SectionCard } from "@/components/veya/section-card";
 import type { ContentFormat, ContentItemBundle } from "@/data/content-types";
-import { getDefaultProfileId, listInstagramProfiles } from "@/data/instagram-profiles";
+import { getDefaultProfileId, listInstagramProfiles, resolveInstagramProfileId } from "@/data/instagram-profiles";
 import { applyChecklistAutoCompletion } from "@/lib/checklist-auto-completion";
 import { createChecklistForType } from "@/lib/checklist-templates";
 import { insertSupabaseBundle, listSupabaseContentItems, updateSupabaseContentItem } from "@/lib/supabase-content-items";
@@ -59,7 +59,7 @@ function matchesType(bundle: ContentItemBundle, filter: (typeof TYPE_FILTERS)[nu
 }
 
 function matchesProfile(bundle: ContentItemBundle, profileId: string): boolean {
-  return (bundle.item.instagramProfileId ?? bundle.item.profileId) === profileId;
+  return resolveInstagramProfileId(bundle.item.instagramProfileId ?? bundle.item.profileId) === resolveInstagramProfileId(profileId);
 }
 
 type CalendarPlanningViewProps = {

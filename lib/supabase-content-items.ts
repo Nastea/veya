@@ -1,7 +1,7 @@
 "use client";
 
 import type { ContentFormat, ContentItemBundle, ContentStatus } from "@/data/content-types";
-import { getDefaultProfileId } from "@/data/instagram-profiles";
+import { getDefaultProfileId, resolveInstagramProfileId } from "@/data/instagram-profiles";
 import { getSupabaseClient } from "@/lib/supabase";
 import { createChecklistForType } from "@/lib/checklist-templates";
 
@@ -99,7 +99,7 @@ export async function insertSupabaseBundle(bundle: ContentItemBundle): Promise<C
     importSource: bundle.item.importSource ?? "manual",
     title: bundle.item.title,
     contentType: bundle.item.contentType,
-    instagramProfileId: bundle.item.instagramProfileId ?? bundle.item.profileId ?? getDefaultProfileId(),
+    instagramProfileId: resolveInstagramProfileId(bundle.item.instagramProfileId ?? bundle.item.profileId ?? getDefaultProfileId()),
     status: bundle.item.status,
     plannedDate,
     caption: bundle.item.caption ?? "",
@@ -127,7 +127,7 @@ export async function updateSupabaseContentItem(bundle: ContentItemBundle): Prom
       import_source: bundle.item.importSource,
       title: bundle.item.title,
       content_type: bundle.item.contentType,
-      instagram_profile_id: bundle.item.instagramProfileId ?? bundle.item.profileId ?? getDefaultProfileId(),
+      instagram_profile_id: resolveInstagramProfileId(bundle.item.instagramProfileId ?? bundle.item.profileId ?? getDefaultProfileId()),
       status: bundle.item.status,
       planned_date: plannedDate,
       caption: bundle.item.caption,
@@ -159,7 +159,7 @@ function requireSupabaseClient(): any {
 }
 
 function mapRowToBundle(row: SupabaseContentItemRow): ContentItemBundle {
-  const profileId = row.instagram_profile_id || getDefaultProfileId();
+  const profileId = resolveInstagramProfileId(row.instagram_profile_id || getDefaultProfileId());
   const contentType = toContentType(row.content_type);
   const status = toStatus(row.status);
   const scheduledAt = normalizePlannedDate(row.planned_date);
