@@ -30,8 +30,10 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
   const [platformFilter, setPlatformFilter] = useState<(typeof PLATFORM_FILTERS)[number]>("All");
   const [typeFilter, setTypeFilter] = useState<(typeof TYPE_FILTERS)[number]>("All");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isPasteOpen, setIsPasteOpen] = useState(false);
   const [importFeedback, setImportFeedback] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [csvText, setCsvText] = useState("");
 
   const [title, setTitle] = useState("");
   const [contentType, setContentType] = useState<ContentFormat>("Post");
@@ -209,6 +211,26 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
     }
   }
 
+  function handleCsvPasteImport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      const imported = importVeyaCsv(csvText);
+      if (imported.length === 0) {
+        setImportFeedback("No rows imported");
+      } else {
+        setAllItems((prev) => mergeById(prev, imported));
+        imported.forEach((bundle) => saveCreatedItem(bundle));
+        setImportFeedback(`Imported ${imported.length} item${imported.length === 1 ? "" : "s"}`);
+      }
+      setIsPasteOpen(false);
+      setCsvText("");
+    } catch (error) {
+      setImportFeedback(error instanceof Error ? error.message : "CSV import failed");
+    } finally {
+      window.setTimeout(() => setImportFeedback(null), 2600);
+    }
+  }
+
   return (
     <>
       <div className="space-y-8 px-5 py-8 sm:px-7 sm:py-10 lg:px-9 lg:py-12">
@@ -268,6 +290,13 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
               className="h-9 rounded-lg border border-zinc-200 bg-white px-4 text-[12px] font-medium text-zinc-700 transition-colors hover:border-zinc-300"
             >
               Import CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsPasteOpen(true)}
+              className="h-9 rounded-lg border border-zinc-200 bg-white px-4 text-[12px] font-medium text-zinc-700 transition-colors hover:border-zinc-300"
+            >
+              Paste CSV
             </button>
             <input
               ref={fileInputRef}
@@ -419,6 +448,61 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
                   className="h-9 rounded-lg border border-zinc-900/90 bg-zinc-900 px-4 text-[12px] font-medium text-white transition-colors hover:bg-zinc-800"
                 >
                   Create idea
+                </button>
+              </div>
+            </form>
+          </SectionCard>
+        </div>
+      ) : null}
+
+      {isPasteOpen ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-zinc-900/25 p-4 backdrop-blur-[1px]">
+          <SectionCard className="w-full max-w-2xl px-6 py-6 sm:px-7">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-zinc-400">Import</p>
+                <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900">Paste CSV</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPasteOpen(false);
+                  setCsvText("");
+                }}
+                className="rounded-md px-2 py-1 text-sm text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800"
+              >
+                Close
+              </button>
+            </div>
+            <form className="mt-5 space-y-4" onSubmit={handleCsvPasteImport}>
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-400">
+                  CSV content
+                </span>
+                <textarea
+                  value={csvText}
+                  onChange={(e) => setCsvText(e.target.value)}
+                  placeholder="Paste full CSV including header row..."
+                  required
+                  className="min-h-56 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[13px] leading-relaxed text-zinc-900 outline-none ring-zinc-300/50 focus:ring-2"
+                />
+              </label>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPasteOpen(false);
+                    setCsvText("");
+                  }}
+                  className="h-9 rounded-lg border border-zinc-200 bg-white px-4 text-[12px] font-medium text-zinc-700 transition-colors hover:border-zinc-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="h-9 rounded-lg border border-zinc-900/90 bg-zinc-900 px-4 text-[12px] font-medium text-white transition-colors hover:bg-zinc-800"
+                >
+                  Import pasted CSV
                 </button>
               </div>
             </form>
