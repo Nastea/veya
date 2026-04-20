@@ -157,6 +157,14 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
     [now, scopedItems]
   );
   const doneItems = useMemo(() => scopedItems.filter((bundle) => bundle.item.status === "Done"), [scopedItems]);
+  const doneReelsCount = useMemo(
+    () => doneItems.filter((bundle) => bundle.item.contentType === "Reel").length,
+    [doneItems]
+  );
+  const doneCarouselsCount = useMemo(
+    () => doneItems.filter((bundle) => bundle.item.contentType === "Carousel").length,
+    [doneItems]
+  );
 
   const publishedReelsCount = publishedItems.filter((bundle) => bundle.item.contentType === "Reel").length;
   const publishedCarouselsCount = publishedItems.filter((bundle) => bundle.item.contentType === "Carousel").length;
@@ -165,7 +173,6 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
   const carouselsTotal = publishedCarouselsCount + manualAdjustment.carousels;
   const postsTotal = publishedPostsCount + manualAdjustment.posts;
   const filmingDaysTotal = manualAdjustment.filmingDays;
-  const doneCount = doneItems.length;
 
   const weeksInPeriod = Math.max(1, Math.ceil((period.end.getTime() - period.start.getTime()) / (7 * 24 * 60 * 60 * 1000)));
   const sortedScopedItems = useMemo(
@@ -325,12 +332,13 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
         </div>
       </SectionCard>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <ProgressCard label="Reels published" completed={reelsTotal} target={reelsTarget} />
         <ProgressCard label="Carousels published" completed={carouselsTotal} target={carouselsTarget} />
         <ProgressCard label="Posts published" completed={postsTotal} target={0} showTarget={false} />
         <ProgressCard label="Filming days (manual)" completed={filmingDaysTotal} target={filmingTarget} />
-        <ProgressCard label="Done items" completed={doneCount} target={0} showTarget={false} />
+        <ProgressCard label="Done reels" completed={doneReelsCount} target={0} showTarget={false} />
+        <ProgressCard label="Done carousels" completed={doneCarouselsCount} target={0} showTarget={false} />
       </div>
 
       <SectionCard className="px-6 py-6">
