@@ -21,7 +21,12 @@ export function CalendarContentCard({ bundle, dragHandleProps }: CalendarContent
   return (
     <Link
       href={`/content/${bundle.id}`}
-      className="group block overflow-hidden rounded-xl border border-zinc-200/75 bg-white transition-colors hover:border-zinc-300"
+      className={[
+        "group block overflow-hidden rounded-xl border bg-white transition-colors",
+        bundle.item.status === "Done"
+          ? "border-emerald-300/90 hover:border-emerald-400"
+          : "border-zinc-200/75 hover:border-zinc-300"
+      ].join(" ")}
     >
       <ContentPreviewCard
         title={bundle.item.title}
@@ -46,12 +51,7 @@ export function CalendarContentCard({ bundle, dragHandleProps }: CalendarContent
             >
               {bundle.item.contentType}
             </span>
-            {bundle.item.status === "Done" ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200/90 bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
-                <CheckCircle2 className="h-3 w-3" strokeWidth={2} />
-                Done
-              </span>
-            ) : null}
+            {bundle.item.status === "Done" ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" strokeWidth={2} /> : null}
           </div>
           {dragHandleProps ? (
             <button
