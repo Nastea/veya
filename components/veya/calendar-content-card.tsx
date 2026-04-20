@@ -70,7 +70,14 @@ export function CalendarContentCard({ bundle, dragHandleProps }: CalendarContent
         <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
           <span className="truncate text-zinc-500">{platformLabel}</span>
           <span className="text-zinc-300">•</span>
-          <span className="inline-flex rounded-full border border-zinc-200/90 bg-zinc-50 px-1.5 py-0.5 text-zinc-600">
+          <span
+            className={[
+              "inline-flex rounded-full border px-1.5 py-0.5",
+              bundle.item.status === "Done"
+                ? "border-emerald-200/90 bg-emerald-50 text-emerald-700"
+                : "border-zinc-200/90 bg-zinc-50 text-zinc-600"
+            ].join(" ")}
+          >
             {bundle.item.status}
           </span>
         </div>

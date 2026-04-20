@@ -357,12 +357,12 @@ export function CalendarPlanningView({
                 key={i}
                 index={i}
                 day={day}
-                className="min-h-[168px] border-b border-l border-zinc-100 bg-white p-2 first:border-l-0 [&:nth-child(7n+1)]:border-l-0 lg:min-h-[200px]"
+                className="min-h-[230px] border-b border-l border-zinc-100 bg-white p-2 first:border-l-0 [&:nth-child(7n+1)]:border-l-0 lg:min-h-[270px]"
               >
                 {day !== null ? (
                   <>
                     <p className="text-[11px] font-medium tabular-nums text-zinc-500">{day}</p>
-                    <ul className="mt-2 max-h-[200px] space-y-2 overflow-y-auto pr-0.5 lg:max-h-[240px]">
+                    <ul className="mt-2 space-y-2 pr-0.5">
                       {dayEvents.map((b) => (
                         <li key={b.id}>
                           <DraggableCalendarCard bundle={b} />
