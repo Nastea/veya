@@ -17,7 +17,7 @@ export function ContentPreviewCard({
   title,
   item,
   assets,
-  aspectClassName = "aspect-[4/3]",
+  aspectClassName = "aspect-[4/5]",
   variant = "ideas"
 }: ContentPreviewCardProps) {
   const preview = resolvePreviewAsset(item, assets);

@@ -598,7 +598,7 @@ function IdeaCard({ bundle, onDelete }: { bundle: ContentItemBundle; onDelete: (
           title={bundle.item.title}
           item={bundle.item}
           assets={bundle.assets}
-          aspectClassName="aspect-[4/3]"
+          aspectClassName="aspect-[4/5]"
           variant="ideas"
         />
         <div className="space-y-2 px-4 py-4">

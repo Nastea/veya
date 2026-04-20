@@ -24,7 +24,7 @@ export function CalendarContentCard({ bundle }: CalendarContentCardProps) {
         title={bundle.item.title}
         item={bundle.item}
         assets={bundle.assets}
-        aspectClassName="aspect-[5/3] w-full"
+        aspectClassName="aspect-[4/5] w-full"
         variant="calendar"
       />
       <div className="space-y-2 p-2.5">
