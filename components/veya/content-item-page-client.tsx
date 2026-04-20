@@ -9,7 +9,6 @@ import { SectionCard } from "@/components/veya/section-card";
 import { VeyaAppShell } from "@/components/veya/veya-app-shell";
 import type { ContentItemBundle, ContentItemFields } from "@/data/content-types";
 import { applyChecklistAutoCompletion } from "@/lib/checklist-auto-completion";
-import { getCreatedItemById, saveCreatedItem } from "@/lib/client-created-items";
 import { reconcileChecklistForType } from "@/lib/checklist-templates";
 import {
   deleteSupabaseContentItem,
@@ -26,29 +25,20 @@ export function ContentItemPageClient({ id, initialBundle }: ContentItemPageClie
   const router = useRouter();
   const [bundle, setBundle] = useState<ContentItemBundle | null>(initialBundle);
   const [statusText, setStatusText] = useState("Saved");
-  const editable = id.startsWith("created-") || id.startsWith("supa-");
-  const isSupabaseItem = id.startsWith("supa-");
+  const editable = id.startsWith("supa-");
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadBundle() {
       if (initialBundle) return;
-      const fromSession = getCreatedItemById(id);
-      if (fromSession) {
-        if (!cancelled) setBundle(fromSession);
-        return;
-      }
-      if (isSupabaseItem) {
-        try {
-          const fromSupabase = await getSupabaseContentItemById(id);
-          if (!cancelled && fromSupabase) {
-            setBundle(fromSupabase);
-            saveCreatedItem(fromSupabase);
-          }
-        } catch {
-          // Keep empty-state behavior if Supabase fetch fails.
+      try {
+        const fromSupabase = await getSupabaseContentItemById(id);
+        if (!cancelled && fromSupabase) {
+          setBundle(fromSupabase);
         }
+      } catch {
+        // Keep empty-state behavior if Supabase fetch fails.
       }
     }
 
@@ -56,7 +46,7 @@ export function ContentItemPageClient({ id, initialBundle }: ContentItemPageClie
     return () => {
       cancelled = true;
     };
-  }, [id, initialBundle, isSupabaseItem]);
+  }, [id, initialBundle]);
 
   if (!bundle) {
     return (
@@ -88,13 +78,10 @@ export function ContentItemPageClient({ id, initialBundle }: ContentItemPageClie
       const nextTasks = applyChecklistAutoCompletion(baseTasks, next, prev.assets, prev.item);
       const updated = { ...prev, item: next, tasks: nextTasks };
       if (editable) {
-        saveCreatedItem(updated);
-        if (updated.id.startsWith("supa-")) {
-          setStatusText("Syncing...");
-          void updateSupabaseContentItem(updated)
-            .then(() => setStatusText("Synced"))
-            .catch(() => setStatusText("Saved locally"));
-        }
+        setStatusText("Syncing...");
+        void updateSupabaseContentItem(updated)
+          .then(() => setStatusText("Synced"))
+          .catch(() => setStatusText("Sync failed"));
       }
       return updated;
     });
@@ -104,7 +91,12 @@ export function ContentItemPageClient({ id, initialBundle }: ContentItemPageClie
     setBundle((prev) => {
       if (!prev) return prev;
       const updated = { ...prev, tasks: nextTasks };
-      if (editable) saveCreatedItem(updated);
+      if (editable) {
+        setStatusText("Syncing...");
+        void updateSupabaseContentItem(updated)
+          .then(() => setStatusText("Synced"))
+          .catch(() => setStatusText("Sync failed"));
+      }
       return updated;
     });
   }

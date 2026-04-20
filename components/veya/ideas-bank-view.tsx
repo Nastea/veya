@@ -9,12 +9,10 @@ import { SectionCard } from "@/components/veya/section-card";
 import type { ContentFormat, ContentItemBundle, ContentStatus } from "@/data/content-types";
 import { getDefaultProfileId, listInstagramProfiles } from "@/data/instagram-profiles";
 import { applyChecklistAutoCompletion } from "@/lib/checklist-auto-completion";
-import { deleteCreatedItem, getCreatedItems, saveCreatedItem } from "@/lib/client-created-items";
 import { createChecklistForType } from "@/lib/checklist-templates";
 import {
   deleteSupabaseContentItem,
   insertSupabaseBundle,
-  insertSupabaseContentItem,
   listSupabaseContentItems
 } from "@/lib/supabase-content-items";
 import { importVeyaCsv } from "@/lib/veya-csv-import";
@@ -53,16 +51,14 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
 
   useEffect(() => {
     let cancelled = false;
-    const sessionItems = getCreatedItems();
-
     async function load() {
       try {
         const remoteItems = await listSupabaseContentItems();
         if (cancelled) return;
-        setAllItems(remoteItems.length > 0 ? mergeById(sessionItems, remoteItems) : sessionItems);
+        setAllItems(remoteItems);
       } catch {
         if (cancelled) return;
-        setAllItems(sessionItems);
+        setAllItems([]);
       }
     }
 
@@ -167,34 +163,12 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
       tasks: applyChecklistAutoCompletion(draftBundle.tasks, draftBundle.item, draftBundle.assets)
     };
 
-    const plannedDateForDb = hasDate ? plannedDate : null;
-
     try {
-      const inserted = await insertSupabaseContentItem({
-        externalId: id,
-        importSource: "manual",
-        title: cleanTitle,
-        contentType,
-        instagramProfileId: profileId,
-        status,
-        plannedDate: plannedDateForDb,
-        caption: caption.trim(),
-        script: "",
-        description: "",
-        notes: "",
-        filmingDate: null,
-        assetSource: "manual",
-        assetFolderUrl: "",
-        driveLink: "https://drive.google.com/drive/folders/1mockIdeaBank",
-        coverImageUrl: ""
-      });
+      const inserted = await insertSupabaseBundle(newBundle);
       setAllItems((prev) => [inserted, ...prev]);
-      saveCreatedItem(inserted);
       setImportFeedback("Idea saved to Supabase");
     } catch {
-      setAllItems((prev) => [newBundle, ...prev]);
-      saveCreatedItem(newBundle);
-      setImportFeedback("Supabase unavailable. Saved locally for now.");
+      setImportFeedback("Save failed. Could not sync to Supabase.");
     }
 
     setIsCreateOpen(false);
@@ -218,13 +192,11 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
           .filter((entry): entry is PromiseFulfilledResult<ContentItemBundle> => entry.status === "fulfilled")
           .map((entry) => entry.value);
         const failed = results.length - synced.length;
-        const toStore = synced.length > 0 ? mergeById(imported, synced) : imported;
-        setAllItems((prev) => mergeById(prev, toStore));
-        toStore.forEach((bundle) => saveCreatedItem(bundle));
+        setAllItems((prev) => mergeById(prev, synced));
         setImportFeedback(
           failed > 0
-            ? `Imported ${toStore.length} items (${failed} saved only locally)`
-            : `Imported ${toStore.length} item${toStore.length === 1 ? "" : "s"}`
+            ? `Imported ${synced.length} items (${failed} failed to sync)`
+            : `Imported ${synced.length} item${synced.length === 1 ? "" : "s"}`
         );
       }
     } catch (error) {
@@ -251,13 +223,11 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
           .filter((entry): entry is PromiseFulfilledResult<ContentItemBundle> => entry.status === "fulfilled")
           .map((entry) => entry.value);
         const failed = results.length - synced.length;
-        const toStore = synced.length > 0 ? mergeById(imported, synced) : imported;
-        setAllItems((prev) => mergeById(prev, toStore));
-        toStore.forEach((bundle) => saveCreatedItem(bundle));
+        setAllItems((prev) => mergeById(prev, synced));
         setImportFeedback(
           failed > 0
-            ? `Imported ${toStore.length} items (${failed} saved only locally)`
-            : `Imported ${toStore.length} item${toStore.length === 1 ? "" : "s"}`
+            ? `Imported ${synced.length} items (${failed} failed to sync)`
+            : `Imported ${synced.length} item${synced.length === 1 ? "" : "s"}`
         );
       }
       setIsPasteOpen(false);
@@ -271,22 +241,17 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
   }
 
   async function handleDeleteIdea(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-    setAllItems((prev) => prev.filter((item) => item.id !== id));
-    deleteCreatedItem(id);
-    if (id.startsWith("supa-")) {
-      try {
-        await deleteSupabaseContentItem(id);
-        setImportFeedback("Idea deleted");
-      } catch {
-        setImportFeedback("Delete failed on Supabase. Removed locally.");
-      }
-    } else {
+    try {
+      await deleteSupabaseContentItem(id);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      setAllItems((prev) => prev.filter((item) => item.id !== id));
       setImportFeedback("Idea deleted");
+    } catch {
+      setImportFeedback("Delete failed on Supabase.");
     }
     window.setTimeout(() => setImportFeedback(null), 2000);
   }
@@ -316,25 +281,26 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
     const targetIds = sorted.map((bundle) => bundle.id).filter((id) => selectedIds.has(id));
     if (targetIds.length === 0) return;
 
-    setAllItems((prev) => prev.filter((item) => !targetIds.includes(item.id)));
-    targetIds.forEach((id) => deleteCreatedItem(id));
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      targetIds.forEach((id) => next.delete(id));
-      return next;
-    });
+    const results = await Promise.allSettled(targetIds.map((id) => deleteSupabaseContentItem(id)));
+    const succeeded = results
+      .map((result, index) => ({ result, id: targetIds[index] }))
+      .filter((entry) => entry.result.status === "fulfilled")
+      .map((entry) => entry.id);
+    const failed = targetIds.length - succeeded.length;
 
-    const supaIds = targetIds.filter((id) => id.startsWith("supa-"));
-    if (supaIds.length > 0) {
-      const results = await Promise.allSettled(supaIds.map((id) => deleteSupabaseContentItem(id)));
-      const failed = results.filter((r) => r.status === "rejected").length;
-      if (failed > 0) {
-        setImportFeedback(`Deleted ${targetIds.length - failed} items. ${failed} failed on Supabase.`);
-      } else {
-        setImportFeedback(`Deleted ${targetIds.length} items.`);
-      }
+    if (succeeded.length > 0) {
+      setAllItems((prev) => prev.filter((item) => !succeeded.includes(item.id)));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        succeeded.forEach((id) => next.delete(id));
+        return next;
+      });
+    }
+
+    if (failed > 0) {
+      setImportFeedback(`Deleted ${succeeded.length} items. ${failed} failed on Supabase.`);
     } else {
-      setImportFeedback(`Deleted ${targetIds.length} items.`);
+      setImportFeedback(`Deleted ${succeeded.length} items.`);
     }
     window.setTimeout(() => setImportFeedback(null), 2200);
   }

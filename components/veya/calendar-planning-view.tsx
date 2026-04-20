@@ -13,7 +13,6 @@ import { SectionCard } from "@/components/veya/section-card";
 import type { ContentFormat, ContentItemBundle } from "@/data/content-types";
 import { getDefaultProfileId, listInstagramProfiles } from "@/data/instagram-profiles";
 import { applyChecklistAutoCompletion } from "@/lib/checklist-auto-completion";
-import { saveCreatedItem, getCreatedItems } from "@/lib/client-created-items";
 import { createChecklistForType } from "@/lib/checklist-templates";
 import { insertSupabaseBundle, listSupabaseContentItems, updateSupabaseContentItem } from "@/lib/supabase-content-items";
 
@@ -92,15 +91,14 @@ export function CalendarPlanningView({
 
   useEffect(() => {
     let cancelled = false;
-    const sessionItems = getCreatedItems();
     async function load() {
       try {
         const remoteItems = await listSupabaseContentItems();
         if (cancelled) return;
-        setAllItems(remoteItems.length > 0 ? mergeById(sessionItems, remoteItems) : sessionItems);
+        setAllItems(remoteItems);
       } catch {
         if (cancelled) return;
-        setAllItems(sessionItems);
+        setAllItems([]);
       }
     }
     void load();
@@ -231,7 +229,6 @@ export function CalendarPlanningView({
     try {
       const inserted = await insertSupabaseBundle(newBundle);
       setAllItems((prev) => [inserted, ...prev]);
-      saveCreatedItem(inserted);
       setYear(new Date(scheduledAt).getUTCFullYear());
       setMonthIndex(new Date(scheduledAt).getUTCMonth());
       setCreateFeedback("Created and synced. Opening details...");
@@ -243,22 +240,15 @@ export function CalendarPlanningView({
         router.push(`/content/${inserted.id}`);
       }, 220);
     } catch {
-      setAllItems((prev) => [newBundle, ...prev]);
-      saveCreatedItem(newBundle);
-      setYear(new Date(scheduledAt).getUTCFullYear());
-      setMonthIndex(new Date(scheduledAt).getUTCMonth());
-      setCreateFeedback("Supabase unavailable. Saved locally.");
-      setIsCreateOpen(false);
-      resetCreateForm();
+      setCreateFeedback("Create failed. Could not sync to Supabase.");
       window.setTimeout(() => {
         setCreateFeedback(null);
         setIsCreating(false);
-        router.push(`/content/${newBundle.id}`);
-      }, 220);
+      }, 2200);
     }
   }
 
-  function handleDragEnd(event: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
     const overId = event.over?.id;
     const activeId = String(event.active.id);
     if (!overId || !String(overId).startsWith("day-")) return;
@@ -276,20 +266,24 @@ export function CalendarPlanningView({
       minute: "2-digit"
     });
 
-    setAllItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== activeId) return item;
-        const updated: ContentItemBundle = {
-          ...item,
-          item: { ...item.item, scheduledAt, scheduledDate, status: item.item.status === "Idea" ? "Planned" : item.item.status }
-        };
-        saveCreatedItem(updated);
-        if (updated.id.startsWith("supa-")) {
-          void updateSupabaseContentItem(updated);
-        }
-        return updated;
-      })
-    );
+    const previous = allItems;
+    const updated = previous.map((item) => {
+      if (item.id !== activeId) return item;
+      return {
+        ...item,
+        item: { ...item.item, scheduledAt, scheduledDate, status: item.item.status === "Idea" ? "Planned" : item.item.status }
+      };
+    });
+    setAllItems(updated);
+    const changed = updated.find((item) => item.id === activeId);
+    if (!changed) return;
+    try {
+      await updateSupabaseContentItem(changed);
+    } catch {
+      setAllItems(previous);
+      setCreateFeedback("Move failed. Could not sync to Supabase.");
+      window.setTimeout(() => setCreateFeedback(null), 2200);
+    }
   }
 
   return (
@@ -650,15 +644,4 @@ function buildAssetsForType(id: string, type: ContentFormat) {
     { id: `${id}-asset-2`, type: "image" as const, label: "Slide 2", color: "from-stone-200/60 to-neutral-50" },
     { id: `${id}-asset-3`, type: "image" as const, label: "Slide 3", color: "from-neutral-100 to-zinc-50" }
   ];
-}
-
-function mergeById(base: ContentItemBundle[], additions: ContentItemBundle[]): ContentItemBundle[] {
-  const seen = new Set<string>();
-  const merged: ContentItemBundle[] = [];
-  for (const item of [...additions, ...base]) {
-    if (seen.has(item.id)) continue;
-    seen.add(item.id);
-    merged.push(item);
-  }
-  return merged;
 }

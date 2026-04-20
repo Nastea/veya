@@ -6,7 +6,6 @@ import { useInstagramProfile } from "@/components/veya/instagram-profile-context
 import { SectionCard } from "@/components/veya/section-card";
 import type { ContentItemBundle } from "@/data/content-types";
 import { getDefaultProfileId, getInstagramProfileById } from "@/data/instagram-profiles";
-import { getCreatedItems } from "@/lib/client-created-items";
 import { listSupabaseContentItems } from "@/lib/supabase-content-items";
 
 type ReportingViewProps = {
@@ -43,15 +42,14 @@ export function ReportingView({ items = [] }: ReportingViewProps) {
 
   useEffect(() => {
     let cancelled = false;
-    const sessionItems = getCreatedItems();
     async function loadItems() {
       try {
         const remoteItems = await listSupabaseContentItems();
         if (cancelled) return;
-        setAllItems(remoteItems.length > 0 ? mergeById(sessionItems, remoteItems) : sessionItems);
+        setAllItems(remoteItems);
       } catch {
         if (cancelled) return;
-        setAllItems(sessionItems);
+        setAllItems([]);
       }
     }
     void loadItems();
@@ -410,16 +408,5 @@ function formatRange(start: Date, end: Date): string {
   const endInclusive = new Date(end);
   endInclusive.setUTCDate(endInclusive.getUTCDate() - 1);
   return `${formatter.format(start)} - ${formatter.format(endInclusive)}`;
-}
-
-function mergeById(base: ContentItemBundle[], additions: ContentItemBundle[]): ContentItemBundle[] {
-  const seen = new Set<string>();
-  const merged: ContentItemBundle[] = [];
-  for (const item of [...additions, ...base]) {
-    if (seen.has(item.id)) continue;
-    seen.add(item.id);
-    merged.push(item);
-  }
-  return merged;
 }
 
