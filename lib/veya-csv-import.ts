@@ -8,6 +8,7 @@ import { createChecklistForType } from "@/lib/checklist-templates";
 type CsvRow = Record<string, string>;
 type ImportOptions = {
   defaultProfileId?: string;
+  defaultPlatform?: "Instagram" | "Pinterest";
 };
 
 const REQUIRED_HEADERS = ["externalid", "title", "contenttype", "status"] as const;
@@ -35,6 +36,7 @@ function rowToBundle(row: CsvRow, index: number, options: ImportOptions): Conten
   const plannedDate = row.planneddate || "";
   const filmingDate = row.filmingdate || "";
   const driveUrl = row.drivelink || row.assetfolderurl || "";
+  const platform = resolvePlatform(row.platform, options.defaultPlatform);
   const scheduledAt = normalizeIsoDate(plannedDate);
   const scheduledDate = scheduledAt
     ? new Date(scheduledAt).toLocaleString("en-US", {
@@ -60,7 +62,7 @@ function rowToBundle(row: CsvRow, index: number, options: ImportOptions): Conten
       instagramProfileId: profileId,
       profileId,
       project: "Imported",
-      platform: ["Instagram"],
+      platform: [platform],
       script: row.script || "",
       description: row.description || "",
       notes: row.notes || "",
@@ -169,6 +171,13 @@ function resolveProfileId(raw: string, fallbackProfileId?: string): string {
   const byName = profiles.find((profile) => profile.name.toLowerCase() === value.toLowerCase());
   if (byName) return byName.id;
   return fallbackProfileId || getDefaultProfileId();
+}
+
+function resolvePlatform(raw: string, fallback?: "Instagram" | "Pinterest"): "Instagram" | "Pinterest" {
+  const value = raw.trim().toLowerCase();
+  if (value === "pinterest") return "Pinterest";
+  if (value === "instagram") return "Instagram";
+  return fallback ?? "Instagram";
 }
 
 function slug(input: string): string {

@@ -34,6 +34,8 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
   const [importFeedback, setImportFeedback] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [csvText, setCsvText] = useState("");
+  const [csvImportProfileId, setCsvImportProfileId] = useState<string>(selectedProfileId || getDefaultProfileId());
+  const [csvImportPlatform, setCsvImportPlatform] = useState<"Instagram" | "Pinterest">("Instagram");
 
   const [title, setTitle] = useState("");
   const [contentType, setContentType] = useState<ContentFormat>("Post");
@@ -66,6 +68,7 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
 
   useEffect(() => {
     setProfileId(selectedProfileId);
+    setCsvImportProfileId(selectedProfileId);
   }, [selectedProfileId]);
 
   const filtered = useMemo(() => {
@@ -195,7 +198,10 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
     if (!file) return;
     try {
       const text = await file.text();
-      const imported = importVeyaCsv(text, { defaultProfileId: selectedProfileId });
+      const imported = importVeyaCsv(text, {
+        defaultProfileId: csvImportProfileId,
+        defaultPlatform: csvImportPlatform
+      });
       if (imported.length === 0) {
         setImportFeedback("No rows imported");
       } else {
@@ -214,7 +220,10 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
   function handleCsvPasteImport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
-      const imported = importVeyaCsv(csvText, { defaultProfileId: selectedProfileId });
+      const imported = importVeyaCsv(csvText, {
+        defaultProfileId: csvImportProfileId,
+        defaultPlatform: csvImportPlatform
+      });
       if (imported.length === 0) {
         setImportFeedback("No rows imported");
       } else {
@@ -298,6 +307,27 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
             >
               Paste CSV
             </button>
+            <select
+              value={csvImportProfileId}
+              onChange={(e) => setCsvImportProfileId(e.target.value)}
+              className="h-9 min-w-[10rem] rounded-lg border border-zinc-200/80 bg-white px-2.5 text-[12px] text-zinc-800 outline-none ring-zinc-300/50 focus:ring-2"
+              aria-label="CSV import profile"
+            >
+              {PROFILES.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  CSV: {profile.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={csvImportPlatform}
+              onChange={(e) => setCsvImportPlatform(e.target.value as "Instagram" | "Pinterest")}
+              className="h-9 min-w-[8rem] rounded-lg border border-zinc-200/80 bg-white px-2.5 text-[12px] text-zinc-800 outline-none ring-zinc-300/50 focus:ring-2"
+              aria-label="CSV import platform"
+            >
+              <option value="Instagram">CSV: Instagram</option>
+              <option value="Pinterest">CSV: Pinterest</option>
+            </select>
             <input
               ref={fileInputRef}
               type="file"
@@ -475,6 +505,37 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
               </button>
             </div>
             <form className="mt-5 space-y-4" onSubmit={handleCsvPasteImport}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label>
+                  <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-400">
+                    Import profile
+                  </span>
+                  <select
+                    value={csvImportProfileId}
+                    onChange={(e) => setCsvImportProfileId(e.target.value)}
+                    className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-[13px] text-zinc-900 outline-none ring-zinc-300/50 focus:ring-2"
+                  >
+                    {PROFILES.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-400">
+                    Import platform
+                  </span>
+                  <select
+                    value={csvImportPlatform}
+                    onChange={(e) => setCsvImportPlatform(e.target.value as "Instagram" | "Pinterest")}
+                    className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-[13px] text-zinc-900 outline-none ring-zinc-300/50 focus:ring-2"
+                  >
+                    <option value="Instagram">Instagram</option>
+                    <option value="Pinterest">Pinterest</option>
+                  </select>
+                </label>
+              </div>
               <label className="block">
                 <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-400">
                   CSV content

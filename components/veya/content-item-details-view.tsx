@@ -95,21 +95,7 @@ function ContentDetailsPanel({
   return (
     <section className="flex min-w-0 max-w-md flex-col gap-8 xl:max-w-sm">
       <SectionCard className="px-6 py-7">
-        {editable ? (
-          <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-zinc-400">Editing draft</p>
-            <input
-              value={item.title}
-              onChange={(e) => patchItem({ title: e.target.value })}
-              className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-2xl font-bold leading-[1.15] tracking-tight text-zinc-900 outline-none ring-zinc-300/50 focus:ring-2 sm:text-[1.65rem]"
-            />
-          </div>
-        ) : (
-          <h1 className="text-balance text-2xl font-bold leading-[1.15] tracking-tight text-zinc-900 sm:text-[1.65rem]">
-            {item.title}
-          </h1>
-        )}
-        <div className="mt-8">
+        <div>
           <MetadataRow label="Assignee" value={item.assignee} icon={<UserRound />} />
           <MetadataRow
             label="Status"
@@ -233,38 +219,6 @@ function ContentDetailsPanel({
             </div>
           ) : null}
           <MetadataRow
-            label="Description"
-            value={
-              editable ? (
-                <textarea
-                  value={item.description}
-                  onChange={(e) => patchItem({ description: e.target.value })}
-                  className="min-h-20 w-full rounded-md border border-zinc-200 bg-white px-2 py-2 text-[13px] leading-relaxed text-zinc-800 outline-none ring-zinc-300/50 focus:ring-2"
-                />
-              ) : (
-                item.description || "—"
-              )
-            }
-            icon={<MessageSquareText />}
-            valueClassName="!text-left sm:!text-left text-[14px] leading-relaxed text-zinc-800"
-          />
-          <MetadataRow
-            label="Script"
-            value={
-              editable ? (
-                <textarea
-                  value={item.script}
-                  onChange={(e) => patchItem({ script: e.target.value })}
-                  className="min-h-24 w-full rounded-md border border-zinc-200 bg-white px-2 py-2 text-[13px] leading-relaxed text-zinc-800 outline-none ring-zinc-300/50 focus:ring-2"
-                />
-              ) : (
-                item.script || "—"
-              )
-            }
-            icon={<MessageSquareText />}
-            valueClassName="!text-left sm:!text-left text-[14px] leading-relaxed text-zinc-800"
-          />
-          <MetadataRow
             label="Platform"
             value={
               editable ? (
@@ -311,39 +265,7 @@ function ContentDetailsPanel({
             }
             icon={<CalendarClock />}
           />
-          <MetadataRow
-            label="Caption"
-            value={
-              editable ? (
-                <textarea
-                  value={item.caption}
-                  onChange={(e) => patchItem({ caption: e.target.value })}
-                  className="min-h-28 w-full rounded-md border border-zinc-200 bg-white px-2 py-2 text-[13px] leading-relaxed text-zinc-800 outline-none ring-zinc-300/50 focus:ring-2"
-                />
-              ) : (
-                item.caption
-              )
-            }
-            icon={<MessageSquareText />}
-            valueClassName="!text-left sm:!text-left text-[14px] leading-relaxed text-zinc-800"
-          />
           <MetadataRow label="Hashtags" value={item.hashtags} icon={<Hash />} />
-          <MetadataRow
-            label="Notes"
-            value={
-              editable ? (
-                <textarea
-                  value={item.notes}
-                  onChange={(e) => patchItem({ notes: e.target.value })}
-                  className="min-h-20 w-full rounded-md border border-zinc-200 bg-white px-2 py-2 text-[13px] leading-relaxed text-zinc-800 outline-none ring-zinc-300/50 focus:ring-2"
-                />
-              ) : (
-                item.notes || "—"
-              )
-            }
-            icon={<MessageSquareText />}
-            valueClassName="!text-left sm:!text-left text-[14px] leading-relaxed text-zinc-800"
-          />
           <MetadataRow label="Files" value={item.filesSummary} icon={<Files />} />
         </div>
       </SectionCard>
@@ -396,7 +318,53 @@ export function ContentItemDetailsView({
 }: ContentItemDetailsViewProps) {
   return (
     <div className="grid flex-1 gap-8 px-5 py-8 sm:px-7 sm:py-10 lg:grid-cols-[minmax(0,1.65fr)_minmax(260px,0.72fr)] lg:gap-x-12 lg:gap-y-0 lg:px-9 lg:py-12 xl:grid-cols-[minmax(0,1.75fr)_minmax(280px,0.65fr)] xl:gap-x-16">
-      <ContentMediaPreview key={contentId} item={item} assets={assets} />
+      <section className="space-y-6">
+        {editable ? (
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-zinc-400">Editing draft</p>
+            <input
+              value={item.title}
+              onChange={(e) => onItemChange?.({ ...item, title: e.target.value })}
+              className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-2xl font-bold leading-[1.15] tracking-tight text-zinc-900 outline-none ring-zinc-300/50 focus:ring-2 sm:text-[1.65rem]"
+            />
+          </div>
+        ) : (
+          <h1 className="text-balance text-2xl font-bold leading-[1.15] tracking-tight text-zinc-900 sm:text-[1.65rem]">
+            {item.title}
+          </h1>
+        )}
+        <ContentMediaPreview key={contentId} item={item} assets={assets} />
+        <SectionCard className="space-y-4 px-6 py-6">
+          <FieldBlock
+            label="Caption"
+            value={item.caption}
+            editable={editable}
+            minHeightClassName="min-h-28"
+            onChange={(next) => onItemChange?.({ ...item, caption: next })}
+          />
+          <FieldBlock
+            label="Scenariu"
+            value={item.script}
+            editable={editable}
+            minHeightClassName="min-h-24"
+            onChange={(next) => onItemChange?.({ ...item, script: next })}
+          />
+          <FieldBlock
+            label="Comentarii"
+            value={item.description}
+            editable={editable}
+            minHeightClassName="min-h-20"
+            onChange={(next) => onItemChange?.({ ...item, description: next })}
+          />
+          <FieldBlock
+            label="Note"
+            value={item.notes}
+            editable={editable}
+            minHeightClassName="min-h-20"
+            onChange={(next) => onItemChange?.({ ...item, notes: next })}
+          />
+        </SectionCard>
+      </section>
       <ContentDetailsPanel
         item={item}
         tasks={tasks}
@@ -405,6 +373,37 @@ export function ContentItemDetailsView({
         onItemChange={onItemChange}
         onTasksChange={onTasksChange}
       />
+    </div>
+  );
+}
+
+function FieldBlock({
+  label,
+  value,
+  editable,
+  minHeightClassName,
+  onChange
+}: {
+  label: string;
+  value: string;
+  editable: boolean;
+  minHeightClassName: string;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <div>
+      <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-400">{label}</p>
+      {editable ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${minHeightClassName} w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-[13px] leading-relaxed text-zinc-800 outline-none ring-zinc-300/50 focus:ring-2`}
+        />
+      ) : (
+        <p className="whitespace-pre-wrap rounded-md border border-zinc-100 bg-zinc-50/60 px-3 py-2 text-[14px] leading-relaxed text-zinc-800">
+          {value || "—"}
+        </p>
+      )}
     </div>
   );
 }
