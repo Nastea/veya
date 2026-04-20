@@ -44,6 +44,7 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
   const [profileId, setProfileId] = useState<string>(selectedProfileId || getDefaultProfileId());
   const [plannedDate, setPlannedDate] = useState("");
   const [caption, setCaption] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -84,6 +85,8 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => toTime(a.item.scheduledAt) - toTime(b.item.scheduledAt));
   }, [filtered]);
+
+  const allVisibleSelected = sorted.length > 0 && sorted.every((bundle) => selectedIds.has(bundle.id));
 
   function resetForm() {
     setTitle("");
@@ -241,6 +244,11 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
   }
 
   async function handleDeleteIdea(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     setAllItems((prev) => prev.filter((item) => item.id !== id));
     deleteCreatedItem(id);
     if (id.startsWith("supa-")) {
@@ -254,6 +262,54 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
       setImportFeedback("Idea deleted");
     }
     window.setTimeout(() => setImportFeedback(null), 2000);
+  }
+
+  function toggleSelection(id: string, selected: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (selected) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible(selected: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (selected) {
+        sorted.forEach((bundle) => next.add(bundle.id));
+      } else {
+        sorted.forEach((bundle) => next.delete(bundle.id));
+      }
+      return next;
+    });
+  }
+
+  async function handleDeleteSelected() {
+    const targetIds = sorted.map((bundle) => bundle.id).filter((id) => selectedIds.has(id));
+    if (targetIds.length === 0) return;
+
+    setAllItems((prev) => prev.filter((item) => !targetIds.includes(item.id)));
+    targetIds.forEach((id) => deleteCreatedItem(id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      targetIds.forEach((id) => next.delete(id));
+      return next;
+    });
+
+    const supaIds = targetIds.filter((id) => id.startsWith("supa-"));
+    if (supaIds.length > 0) {
+      const results = await Promise.allSettled(supaIds.map((id) => deleteSupabaseContentItem(id)));
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (failed > 0) {
+        setImportFeedback(`Deleted ${targetIds.length - failed} items. ${failed} failed on Supabase.`);
+      } else {
+        setImportFeedback(`Deleted ${targetIds.length} items.`);
+      }
+    } else {
+      setImportFeedback(`Deleted ${targetIds.length} items.`);
+    }
+    window.setTimeout(() => setImportFeedback(null), 2200);
   }
 
   return (
@@ -353,6 +409,27 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
             />
           </div>
         </header>
+        {sorted.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="inline-flex items-center gap-2 text-[12px] text-zinc-600">
+              <input
+                type="checkbox"
+                checked={allVisibleSelected}
+                onChange={(e) => toggleSelectAllVisible(e.target.checked)}
+                className="h-4 w-4 rounded border-zinc-300 text-zinc-700 focus:ring-zinc-300"
+              />
+              Select all visible
+            </label>
+            <button
+              type="button"
+              onClick={() => void handleDeleteSelected()}
+              disabled={!sorted.some((bundle) => selectedIds.has(bundle.id))}
+              className="h-8 rounded-lg border border-rose-200 bg-white px-3 text-[12px] font-medium text-rose-700 transition-colors hover:border-rose-300 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Delete selected
+            </button>
+          </div>
+        ) : null}
         {importFeedback ? <p className="text-[12px] text-zinc-500">{importFeedback}</p> : null}
 
         {sorted.length === 0 ? (
@@ -369,7 +446,13 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {sorted.map((bundle) => (
-              <IdeaCard key={bundle.id} bundle={bundle} onDelete={handleDeleteIdea} />
+              <IdeaCard
+                key={bundle.id}
+                bundle={bundle}
+                selected={selectedIds.has(bundle.id)}
+                onSelectChange={toggleSelection}
+                onDelete={handleDeleteIdea}
+              />
             ))}
           </div>
         )}
@@ -590,7 +673,17 @@ export function IdeasBankView({ items = [] }: IdeasBankViewProps) {
   );
 }
 
-function IdeaCard({ bundle, onDelete }: { bundle: ContentItemBundle; onDelete: (id: string) => void }) {
+function IdeaCard({
+  bundle,
+  selected,
+  onSelectChange,
+  onDelete
+}: {
+  bundle: ContentItemBundle;
+  selected: boolean;
+  onSelectChange: (id: string, selected: boolean) => void;
+  onDelete: (id: string) => void;
+}) {
   return (
     <div className="group overflow-hidden rounded-2xl border border-zinc-200/70 bg-white transition-colors hover:border-zinc-300">
       <Link href={`/content/${bundle.id}`} className="block">
@@ -614,7 +707,16 @@ function IdeaCard({ bundle, onDelete }: { bundle: ContentItemBundle; onDelete: (
           </div>
         </div>
       </Link>
-      <div className="border-t border-zinc-100 px-4 py-2.5">
+      <div className="flex items-center justify-between border-t border-zinc-100 px-4 py-2.5">
+        <label className="inline-flex items-center gap-2 text-[11px] text-zinc-600">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={(e) => onSelectChange(bundle.id, e.target.checked)}
+            className="h-4 w-4 rounded border-zinc-300 text-zinc-700 focus:ring-zinc-300"
+          />
+          Select
+        </label>
         <button
           type="button"
           onClick={() => void onDelete(bundle.id)}
