@@ -1,28 +1,13 @@
 "use client";
 
 import type { ContentFormat, ContentItemBundle, ContentStatus } from "@/data/content-types";
-import { getDefaultProfileId } from "@/data/instagram-profiles";
+import { getDefaultProfileId, listInstagramProfiles } from "@/data/instagram-profiles";
 import { applyChecklistAutoCompletion } from "@/lib/checklist-auto-completion";
 import { createChecklistForType } from "@/lib/checklist-templates";
 
 type CsvRow = Record<string, string>;
 
-const REQUIRED_HEADERS = [
-  "externalid",
-  "importsource",
-  "title",
-  "contenttype",
-  "instagramprofileid",
-  "status",
-  "planneddate",
-  "caption",
-  "script",
-  "description",
-  "notes",
-  "filmingdate",
-  "assetsource",
-  "assetfolderurl"
-] as const;
+const REQUIRED_HEADERS = ["externalid", "title", "contenttype", "status"] as const;
 
 export function importVeyaCsv(text: string): ContentItemBundle[] {
   const rows = parseCsv(text);
@@ -43,9 +28,10 @@ function rowToBundle(row: CsvRow, index: number): ContentItemBundle {
   const status = toStatus(row.status);
   const externalId = row.externalid || `row-${index + 1}`;
   const id = `created-${slug(externalId)}-${Date.now().toString(36)}-${index}`;
-  const profileId = row.instagramprofileid || getDefaultProfileId();
+  const profileId = resolveProfileId(row.instagramprofileid || row.instagramprofile);
   const plannedDate = row.planneddate || "";
   const filmingDate = row.filmingdate || "";
+  const driveUrl = row.drivelink || row.assetfolderurl || "";
   const scheduledAt = normalizeIsoDate(plannedDate);
   const scheduledDate = scheduledAt
     ? new Date(scheduledAt).toLocaleString("en-US", {
@@ -76,16 +62,16 @@ function rowToBundle(row: CsvRow, index: number): ContentItemBundle {
       description: row.description || "",
       notes: row.notes || "",
       assetSource: row.assetsource || "csv",
-      driveLink: row.assetfolderurl || "",
-      assetFolderUrl: row.assetfolderurl || "",
+      driveLink: driveUrl,
+      assetFolderUrl: driveUrl,
       coverImageUrl: row.coverimageurl || "",
-      googleDriveUrl: row.assetfolderurl || "",
+      googleDriveUrl: driveUrl,
       scheduledAt,
       scheduledDate,
       filmingDate: filmingDate || undefined,
       caption: row.caption || "",
       hashtags: "",
-      filesSummary: row.assetfolderurl ? "Imported assets folder" : "No assets linked",
+      filesSummary: driveUrl ? "Imported assets folder" : "No assets linked",
       ready: false,
       includeInPreview: true,
       primaryAssetId: undefined,
@@ -167,6 +153,19 @@ function toStatus(value: string): ContentStatus {
   if (normalized === "filmed") return "Filmed";
   if (normalized === "done") return "Done";
   return "Idea";
+}
+
+function resolveProfileId(raw: string): string {
+  const value = raw.trim();
+  if (!value) return getDefaultProfileId();
+  const profiles = listInstagramProfiles();
+  const byId = profiles.find((profile) => profile.id.toLowerCase() === value.toLowerCase());
+  if (byId) return byId.id;
+  const byHandle = profiles.find((profile) => profile.handle.toLowerCase() === value.toLowerCase());
+  if (byHandle) return byHandle.id;
+  const byName = profiles.find((profile) => profile.name.toLowerCase() === value.toLowerCase());
+  if (byName) return byName.id;
+  return getDefaultProfileId();
 }
 
 function slug(input: string): string {
